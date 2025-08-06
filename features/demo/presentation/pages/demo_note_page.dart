@@ -192,28 +192,29 @@ class _DemoNotePageState extends State<DemoNotePage> {
   }
 
   void _showEncryptDialog() async {
+    final navigatorContext = context;
     final confirmed = await showDialog<bool>(
-      context: context,
+      context: navigatorContext,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).confirmEncryptNoteTitle),
-        content: Text(AppLocalizations.of(context).confirmEncryptNoteContent),
+        title: Text(AppLocalizations.of(navigatorContext).confirmEncryptNoteTitle),
+        content: Text(AppLocalizations.of(navigatorContext).confirmEncryptNoteContent),
         actions: [
           TextButton(
             onPressed: () async {
               await VibrationService().navigationBackVibration();
-              if (context.mounted) {
-                Navigator.of(context).pop(false);
+              if (navigatorContext.mounted) {
+                Navigator.of(navigatorContext).pop(false);
               }
             },
-            child: Text(AppLocalizations.of(context).cancelButtonText),
+            child: Text(AppLocalizations.of(navigatorContext).cancelButtonText),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(navigatorContext).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
             ),
-            child: Text(AppLocalizations.of(context).encryptButtonText),
+            child: Text(AppLocalizations.of(navigatorContext).encryptButtonText),
           ),
         ],
       ),
@@ -225,10 +226,11 @@ class _DemoNotePageState extends State<DemoNotePage> {
   }
 
   void _encryptNote() async {
+    final navigatorContext = context;
     await VibrationService().noteCreatedVibration();
     await NotificationService().showSuccess(
-      context: context,
-      message: AppLocalizations.of(context).qrCreatedMessage,
+      context: navigatorContext,
+      message: AppLocalizations.of(navigatorContext).qrCreatedMessage,
     );
     
     setState(() {

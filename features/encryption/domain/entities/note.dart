@@ -7,7 +7,6 @@ class Note {
   final DateTime createdAt;
   final DateTime? modifiedAt;
   final String encryptedContent;
-  final String encryptedNoteKey;
   final List<NoteImage> images; // Список изображений в заметке
 
   const Note({
@@ -16,7 +15,6 @@ class Note {
     required this.createdAt,
     this.modifiedAt,
     required this.encryptedContent,
-    required this.encryptedNoteKey,
     this.images = const [], // По умолчанию пустой список
   });
 
@@ -26,7 +24,6 @@ class Note {
     DateTime? createdAt,
     DateTime? modifiedAt,
     String? encryptedContent,
-    String? encryptedNoteKey,
     List<NoteImage>? images,
   }) {
     return Note(
@@ -35,7 +32,6 @@ class Note {
       createdAt: createdAt ?? this.createdAt,
       modifiedAt: modifiedAt ?? this.modifiedAt,
       encryptedContent: encryptedContent ?? this.encryptedContent,
-      encryptedNoteKey: encryptedNoteKey ?? this.encryptedNoteKey,
       images: images ?? this.images,
     );
   }

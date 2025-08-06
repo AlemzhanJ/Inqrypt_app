@@ -372,7 +372,7 @@ class _DemoScannerPageState extends State<DemoScannerPage> with TickerProviderSt
               child: Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -400,19 +400,19 @@ class _DemoScannerPageState extends State<DemoScannerPage> with TickerProviderSt
                     const SizedBox(height: 16),
                     Text(
                       l10n.noteFoundTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       l10n.qrCodeProcessedSuccessfully,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
-                        color: Colors.grey,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                       textAlign: TextAlign.center,
                     ),

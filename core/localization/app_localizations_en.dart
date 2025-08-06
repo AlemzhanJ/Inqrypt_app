@@ -277,6 +277,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get confirmDeleteImage => 'Are you sure you want to delete this image?';
   
+  @override
+  String get confirmDeleteImageContent => 'This action cannot be undone.';
+  
   // Dialogs
   @override
   String get selectImageTitle => 'Select Image';
@@ -615,4 +618,21 @@ class AppLocalizationsEn extends AppLocalizations {
   
   @override
   String get demoInfoDescription => 'This is a demo version for App Review. In the real app, the QR code will contain encrypted data.';
+  
+  // Text paste
+  @override
+  String get pasteWithStyles => 'Paste with styles';
+  
+  @override
+  String get pasteWithStylesDescription => 'Apply surrounding text styles';
+  
+  @override
+  String get pasteAsPlainText => 'Paste as plain text';
+  
+  @override
+  String get pasteAsPlainTextDescription => 'Without formatting';
+  
+  // Image Gallery
+  @override
+  String imageGalleryCounter(int current, int total) => '$current of $total';
 } 

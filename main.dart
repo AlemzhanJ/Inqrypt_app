@@ -112,6 +112,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
+        bottom: false, // Убираем отступ снизу для системных элементов
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Column(
@@ -168,41 +169,11 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 24),
               
-              // Демо-режим для App Review
-              DemoActionButton(
-                icon: Icons.play_arrow,
-                title: l10n.demoInfoTitle,
-                subtitle: l10n.demoModeScanningMessage,
-                onTap: () async {
-                  await VibrationService().navigationForwardVibration();
-                  if (context.mounted) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const DemoNotePage(),
-                      ),
-                    );
-                  }
-                },
-              ),
-              
-              const SizedBox(height: 32),
-              
               // Основные действия
-              Text(
-                l10n.actionsTitle,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Большие кнопки действий
               _BigActionButton(
-                icon: Icons.qr_code,
-                title: l10n.createNoteActionTitle,
-                subtitle: l10n.createNoteActionDescription,
+                icon: Icons.edit_note,
+                title: l10n.noteActionTitle,
+                subtitle: l10n.noteActionSubtitle,
                 onTap: () async {
                   await VibrationService().navigationForwardVibration();
                   if (context.mounted) {
@@ -215,7 +186,7 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
               
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               
               _BigActionButton(
                 icon: Icons.qr_code_scanner,
@@ -233,10 +204,10 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
               
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               
               _BigActionButton(
-                icon: Icons.vpn_key,
+                icon: Icons.key,
                 title: l10n.masterKeyActionTitle,
                 subtitle: l10n.masterKeyActionDescription,
                 onTap: () async {
@@ -262,6 +233,26 @@ class _HomePageState extends State<HomePage> {
                 ),
               
               const SizedBox(height: 32),
+              
+              // Демо-режим для App Review (перемещен в самый низ)
+              DemoActionButton(
+                icon: Icons.play_arrow,
+                title: l10n.demoInfoTitle,
+                subtitle: l10n.demoModeScanningMessage,
+                onTap: () async {
+                  await VibrationService().navigationForwardVibration();
+                  if (context.mounted) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const DemoNotePage(),
+                      ),
+                    );
+                  }
+                },
+              ),
+              
+              // Убираем лишний отступ внизу, добавляем минимальный отступ для системных элементов
+              const SizedBox(height: 20),
             ],
           ),
         ),

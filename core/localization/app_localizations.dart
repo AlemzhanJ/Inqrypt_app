@@ -140,6 +140,7 @@ class AppLocalizations {
   String get confirmDeleteAllNotes => throw UnimplementedError();
   String get confirmDeleteNote => throw UnimplementedError();
   String get confirmDeleteImage => throw UnimplementedError();
+  String get confirmDeleteImageContent => throw UnimplementedError();
   
   // Диалоги
   String get selectImageTitle => throw UnimplementedError();
@@ -284,4 +285,13 @@ class AppLocalizations {
   String get qrDescription => throw UnimplementedError();
   String get demoInfoTitle => throw UnimplementedError();
   String get demoInfoDescription => throw UnimplementedError();
+  
+  // Галерея изображений
+  String imageGalleryCounter(int current, int total) => throw UnimplementedError();
+  
+  // Вставка текста
+  String get pasteWithStyles => throw UnimplementedError();
+  String get pasteWithStylesDescription => throw UnimplementedError();
+  String get pasteAsPlainText => throw UnimplementedError();
+  String get pasteAsPlainTextDescription => throw UnimplementedError();
 } 

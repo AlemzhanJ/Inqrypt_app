@@ -3,6 +3,8 @@ import '../../domain/entities/note.dart';
 import '../../domain/entities/note_image.dart';
 import '../../domain/repositories/note_repository.dart';
 import '../../../../shared/services/image_service.dart';
+import '../../../../shared/services/note_key_storage.dart';
+import '../../../../core/utils/validation_utils.dart';
 
 /// Контроллер для работы с заметками
 class NoteController extends ChangeNotifier {
@@ -13,7 +15,6 @@ class NoteController extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String? _qrCodeData;
-  String? _decryptedNoteKey; // Добавляем поле для расшифрованного ключа
   bool _isFoundNote = false; // Флаг для найденной заметки
   
   // Временные данные для редактирования
@@ -28,7 +29,6 @@ class NoteController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   String? get qrCodeData => _qrCodeData;
-  String? get decryptedNoteKey => _decryptedNoteKey; // Геттер для расшифрованного ключа
   bool get isFoundNote => _isFoundNote; // Геттер для флага найденной заметки
   bool get hasCurrentNote => _currentNote != null;
   bool get isEditing => _isEditing;
@@ -36,6 +36,12 @@ class NoteController extends ChangeNotifier {
   // Геттеры для временных данных
   Map<String, dynamic> get tempContent => _tempContent;
   List<NoteImage> get tempImages => _tempImages;
+
+  /// Получить расшифрованный ключ текущей заметки из secure storage
+  Future<String?> get decryptedNoteKey async {
+    if (_currentNote == null) return null;
+    return await NoteKeyStorage.getNoteKey(_currentNote!.id);
+  }
 
   /// Начать редактирование заметки
   void startEditing() {
@@ -75,13 +81,15 @@ class NoteController extends ChangeNotifier {
     // Очищаем все данные заметки
     _currentNote = null;
     _qrCodeData = null;
-    _decryptedNoteKey = null;
     _isFoundNote = false;
     _isEditing = false;
     
     // Очищаем временные данные
     _tempContent = {};
     _tempImages = [];
+    
+    // Очищаем ключи из secure storage
+    NoteKeyStorage.clearAllNoteKeys();
     
     // Очищаем ошибки
     _clearError();
@@ -96,13 +104,15 @@ class NoteController extends ChangeNotifier {
     
     // Очищаем только содержимое заметки, но сохраняем QR-код
     _currentNote = null;
-    _decryptedNoteKey = null;
     _isFoundNote = false;
     _isEditing = false;
     
     // Очищаем временные данные
     _tempContent = {};
     _tempImages = [];
+    
+    // Очищаем ключи из secure storage
+    NoteKeyStorage.clearAllNoteKeys();
     
     // Очищаем ошибки
     _clearError();
@@ -120,8 +130,9 @@ class NoteController extends ChangeNotifier {
       print('NoteController: Контент: $content');
       print('NoteController: Изображений: ${images.length}');
       
-      _currentNote = await _repository.createNote(content, masterKey, images: images);
-      _qrCodeData = _currentNote!.encryptedNoteKey;
+      final result = await _repository.createNote(content, masterKey, images: images);
+      _currentNote = result.$1;
+      _qrCodeData = result.$2; // Зашифрованный ключ для QR-кода
       _isFoundNote = false; // Сбрасываем флаг для новой заметки
       
       print('NoteController: Заметка создана');
@@ -158,15 +169,19 @@ class NoteController extends ChangeNotifier {
         images: images,
       );
       
-      // Если это найденная заметка, используем существующий ключ
-      final existingNoteKey = _isFoundNote ? _decryptedNoteKey : null;
+      // Если это найденная заметка, используем существующий ключ из secure storage
+      String? existingNoteKey;
+      if (_isFoundNote) {
+        existingNoteKey = await NoteKeyStorage.getNoteKey(_currentNote!.id);
+      }
       
-      _currentNote = await _repository.updateNote(updatedNote, masterKey, existingNoteKey: existingNoteKey);
+      final result = await _repository.updateNote(updatedNote, masterKey, existingNoteKey: existingNoteKey);
+      _currentNote = result.$1;
       
       // Если это найденная заметка, QR-код остается тем же
       // Если это новая заметка, обновляем QR-код
       if (!_isFoundNote) {
-        _qrCodeData = _currentNote!.encryptedNoteKey;
+        _qrCodeData = result.$2;
       }
       
       _clearError();
@@ -182,7 +197,7 @@ class NoteController extends ChangeNotifier {
 
   /// Сохранить заметку с изображениями
   Future<bool> saveNoteWithImages(String masterKey) async {
-    if (_tempContent.isEmpty) {
+    if (ValidationUtils.isQuillContentEmpty(_tempContent) && _tempImages.isEmpty) {
       _setError('Заметка не может быть пустой');
       return false;
     }
@@ -237,7 +252,8 @@ class NoteController extends ChangeNotifier {
       }
       
       _currentNote = note;
-      _decryptedNoteKey = decryptedKey; // Сохраняем расшифрованный ключ
+      // Сохраняем расшифрованный ключ в secure storage
+      await NoteKeyStorage.saveNoteKey(note.id, decryptedKey);
       _isFoundNote = true; // Устанавливаем флаг найденной заметки
       _clearError();
       notifyListeners();
@@ -252,9 +268,13 @@ class NoteController extends ChangeNotifier {
 
   /// Очистить текущую заметку
   void clearCurrentNote() {
+    // Удаляем ключ из secure storage перед очисткой
+    if (_currentNote != null) {
+      NoteKeyStorage.removeNoteKey(_currentNote!.id);
+    }
+    
     _currentNote = null;
     _qrCodeData = null;
-    _decryptedNoteKey = null; // Очищаем расшифрованный ключ
     _isFoundNote = false; // Сбрасываем флаг найденной заметки
     _isEditing = false;
     _tempContent = {};
@@ -266,8 +286,8 @@ class NoteController extends ChangeNotifier {
   /// Загрузить найденную заметку со сканера
   void loadFoundNote(Note note, String decryptedKey) {
     _currentNote = note;
-    _decryptedNoteKey = decryptedKey;
-    _qrCodeData = note.encryptedNoteKey;
+    // Сохраняем расшифрованный ключ в secure storage
+    NoteKeyStorage.saveNoteKey(note.id, decryptedKey);
     _isFoundNote = true; // Устанавливаем флаг найденной заметки
     _isEditing = false; // Начинаем в режиме просмотра
     _tempContent = note.content;
@@ -277,7 +297,7 @@ class NoteController extends ChangeNotifier {
     
     print('NoteController: Загружена найденная заметка');
     print('NoteController: ID: ${note.id}');
-    print('NoteController: Расшифрованный ключ: $decryptedKey');
+    print('NoteController: Расшифрованный ключ сохранен в secure storage');
   }
 
   /// Удалить текущую заметку
@@ -295,9 +315,12 @@ class NoteController extends ChangeNotifier {
       }
       
       await _repository.deleteNote(_currentNote!.id);
+      
+      // Удаляем ключ из secure storage
+      await NoteKeyStorage.removeNoteKey(_currentNote!.id);
+      
       _currentNote = null;
       _qrCodeData = null;
-      _decryptedNoteKey = null; // Очищаем расшифрованный ключ
       _isFoundNote = false; // Сбрасываем флаг найденной заметки
       _isEditing = false;
       _tempContent = {};

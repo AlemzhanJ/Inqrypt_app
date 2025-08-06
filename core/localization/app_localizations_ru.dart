@@ -277,6 +277,9 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get confirmDeleteImage => 'Вы уверены, что хотите удалить это изображение?';
   
+  @override
+  String get confirmDeleteImageContent => 'Это действие нельзя отменить.';
+  
   // Диалоги
   @override
   String get selectImageTitle => 'Выберите изображение';
@@ -618,4 +621,21 @@ class AppLocalizationsRu extends AppLocalizations {
   
   @override
   String get demoInfoDescription => 'Это демонстрационная версия для App Review. В реальном приложении QR-код будет содержать зашифрованные данные.';
+  
+  // Вставка текста
+  @override
+  String get pasteWithStyles => 'Вставить со стилями';
+  
+  @override
+  String get pasteWithStylesDescription => 'Применить стили окружающего текста';
+  
+  @override
+  String get pasteAsPlainText => 'Вставить как обычный текст';
+  
+  @override
+  String get pasteAsPlainTextDescription => 'Без форматирования';
+  
+  // Галерея изображений
+  @override
+  String imageGalleryCounter(int current, int total) => '$current из $total';
 } 

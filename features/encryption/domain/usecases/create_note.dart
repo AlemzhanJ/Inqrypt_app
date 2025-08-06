@@ -9,7 +9,7 @@ class CreateNote {
   CreateNote(this.repository);
 
   /// Создать новую заметку с иерархическим шифрованием
-  Future<Note> call(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []}) async {
+  Future<(Note, String)> call(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []}) async {
     return await repository.createNote(content, masterKey, images: images);
   }
 } 

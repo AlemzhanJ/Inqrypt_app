@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import '../domain/entities/note_image.dart';
 import '../../../shared/services/vibration_service.dart';
+import '../../../core/localization/app_localizations.dart';
 
 /// Страница галереи изображений
 class ImageGalleryPage extends StatefulWidget {
@@ -48,7 +49,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text('${_currentIndex + 1} из ${widget.images.length}'),
+        title: Text(AppLocalizations.of(context).imageGalleryCounter(_currentIndex + 1, widget.images.length)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () async {
@@ -109,8 +110,8 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Удалить изображение?'),
-        content: const Text('Это действие нельзя отменить.'),
+        title: Text(AppLocalizations.of(context).confirmDeleteImage),
+        content: Text(AppLocalizations.of(context).confirmDeleteImageContent),
         actions: [
           TextButton(
             onPressed: () async {
@@ -119,7 +120,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                 Navigator.of(context).pop();
               }
             },
-            child: const Text('Отмена'),
+            child: Text(AppLocalizations.of(context).cancelButtonText),
           ),
           TextButton(
             onPressed: () {
@@ -130,7 +131,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
-            child: const Text('Удалить'),
+            child: Text(AppLocalizations.of(context).tooltipDelete),
           ),
         ],
       ),

@@ -10,10 +10,10 @@ abstract class NoteRepository {
   Future<Note?> getNoteById(String id);
   
   /// Создать новую заметку
-  Future<Note> createNote(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []});
+  Future<(Note, String)> createNote(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []});
   
   /// Обновить заметку
-  Future<Note> updateNote(Note note, String masterKey, {String? existingNoteKey});
+  Future<(Note, String)> updateNote(Note note, String masterKey, {String? existingNoteKey});
   
   /// Удалить заметку
   Future<void> deleteNote(String id);

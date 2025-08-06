@@ -27,17 +27,17 @@ class NoteRepositoryImpl implements NoteRepository {
   }
 
   @override
-  Future<Note> createNote(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []}) async {
+  Future<(Note, String)> createNote(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []}) async {
     print('NoteRepositoryImpl: createNote - начало');
     print('NoteRepositoryImpl: Контент: $content');
     print('NoteRepositoryImpl: Изображений: ${images.length}');
     
     try {
-      final note = await _storage.createNote(content, masterKey, images: images);
+      final result = await _storage.createNote(content, masterKey, images: images);
       print('NoteRepositoryImpl: Заметка создана успешно');
-      print('NoteRepositoryImpl: ID: ${note.id}');
-      print('NoteRepositoryImpl: Зашифрованный ключ: ${note.encryptedNoteKey}');
-      return note;
+      print('NoteRepositoryImpl: ID: ${result.$1.id}');
+      print('NoteRepositoryImpl: Зашифрованный ключ: ${result.$2}');
+      return result;
     } catch (e) {
       print('NoteRepositoryImpl: Ошибка создания заметки: $e');
       rethrow;
@@ -45,7 +45,7 @@ class NoteRepositoryImpl implements NoteRepository {
   }
 
   @override
-  Future<Note> updateNote(Note note, String masterKey, {String? existingNoteKey}) async {
+  Future<(Note, String)> updateNote(Note note, String masterKey, {String? existingNoteKey}) async {
     print('NoteRepositoryImpl: updateNote - начало');
     print('NoteRepositoryImpl: ID заметки: ${note.id}');
     print('NoteRepositoryImpl: Контент: ${note.content}');
@@ -53,10 +53,9 @@ class NoteRepositoryImpl implements NoteRepository {
     print('NoteRepositoryImpl: Используем существующий ключ: ${existingNoteKey != null}');
     
     try {
-      final updatedNote = await _storage.updateNote(note, masterKey, existingNoteKey: existingNoteKey);
+      final result = await _storage.updateNote(note, masterKey, existingNoteKey: existingNoteKey);
       print('NoteRepositoryImpl: Заметка обновлена успешно');
-      print('NoteRepositoryImpl: Новый зашифрованный ключ: ${updatedNote.encryptedNoteKey}');
-      return updatedNote;
+      return result;
     } catch (e) {
       print('NoteRepositoryImpl: Ошибка обновления заметки: $e');
       rethrow;

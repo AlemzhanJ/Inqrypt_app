@@ -27,7 +27,7 @@ class NoteStorage {
   }
   
   /// Создать новую заметку
-  Future<Note> createNote(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []}) async {
+  Future<(Note, String)> createNote(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []}) async {
     print('NoteStorage: Создаем новую заметку...');
     
     // Генерируем уникальный ключ для заметки
@@ -85,7 +85,6 @@ class NoteStorage {
       content: updatedContent,
       createdAt: DateTime.now(),
       encryptedContent: encryptedContent,
-      encryptedNoteKey: encryptedNoteKey,
       images: processedImages,
     );
     
@@ -95,7 +94,7 @@ class NoteStorage {
     await _saveNote(note);
     print('NoteStorage: Заметка сохранена в файл');
     
-    return note;
+    return (note, encryptedNoteKey);
   }
   
   /// Получить все заметки
@@ -124,7 +123,6 @@ class NoteStorage {
             ? DateTime.parse(noteMap['modifiedAt']) 
             : null,
           encryptedContent: noteMap['encryptedContent'],
-          encryptedNoteKey: noteMap['encryptedNoteKey'],
           images: images,
         ));
       } catch (e) {
@@ -186,7 +184,7 @@ class NoteStorage {
   }
   
   /// Обновить заметку
-  Future<Note> updateNote(Note note, String masterKey, {String? existingNoteKey}) async {
+  Future<(Note, String)> updateNote(Note note, String masterKey, {String? existingNoteKey}) async {
     // Используем существующий ключ или генерируем новый
     final noteKey = existingNoteKey ?? _generateNoteKey();
     
@@ -268,7 +266,6 @@ class NoteStorage {
     final updatedNote = note.copyWith(
       content: updatedContent,
       encryptedContent: encryptedContent,
-      encryptedNoteKey: encryptedNoteKey,
       modifiedAt: DateTime.now(),
       images: processedImages,
     );
@@ -289,7 +286,7 @@ class NoteStorage {
       }
     }
     
-    return updatedNote;
+    return (updatedNote, encryptedNoteKey);
   }
   
   /// Удалить заметку
@@ -316,7 +313,6 @@ class NoteStorage {
       'createdAt': note.createdAt.toIso8601String(),
       'modifiedAt': note.modifiedAt?.toIso8601String(),
       'encryptedContent': note.encryptedContent,
-      'encryptedNoteKey': note.encryptedNoteKey,
       'images': imagesJson,
     });
     

@@ -27,7 +27,7 @@ class QRDisplayWidget extends StatefulWidget {
 
 class _QRDisplayWidgetState extends State<QRDisplayWidget> {
   final GlobalKey _qrKey = GlobalKey();
-  bool _isSaving = false;
+  final bool _isSaving = false;
 
   @override
   Widget build(BuildContext context) {

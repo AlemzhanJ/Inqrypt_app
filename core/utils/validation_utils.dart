@@ -56,6 +56,38 @@ class ValidationUtils {
     return true;
   }
 
+  /// Проверить, является ли содержимое Quill Delta пустым
+  /// 
+  /// [content] - содержимое в формате Quill Delta (Map с ключом 'ops')
+  /// Возвращает true если содержимое пустое или содержит только пробелы
+  static bool isQuillContentEmpty(Map<String, dynamic> content) {
+    if (content.isEmpty) return true;
+    
+    // Проверяем, есть ли ключ 'ops' и является ли он списком
+    if (!content.containsKey('ops') || content['ops'] is! List) {
+      return true;
+    }
+    
+    final ops = content['ops'] as List<dynamic>;
+    if (ops.isEmpty) return true;
+    
+    // Проверяем, содержит ли Delta только пустые строки или пробелы
+    String plainText = '';
+    for (final op in ops) {
+      if (op is Map<String, dynamic> && op.containsKey('insert')) {
+        final insert = op['insert'];
+        if (insert is String) {
+          plainText += insert;
+        }
+      }
+    }
+    
+    // Удаляем все пробелы, переносы строк и другие whitespace символы
+    final trimmedText = plainText.trim();
+    
+    return trimmedText.isEmpty;
+  }
+
   /// Валидация ключа
   /// 
   /// [key] - ключ для проверки

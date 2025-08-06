@@ -8,6 +8,7 @@ import '../widgets/qr_display_widget.dart';
 import '../../domain/entities/note_image.dart';
 import '../../../../shared/services/notification_service.dart';
 import '../../../../shared/services/vibration_service.dart';
+import '../../../../core/utils/validation_utils.dart';
 
 /// Страница создания и редактирования заметки в стиле Apple Notes
 class NotePage extends StatefulWidget {
@@ -23,6 +24,10 @@ class _NotePageState extends State<NotePage> {
   Map<String, dynamic> _currentContent = {};
   List<NoteImage> _currentImages = [];
   bool _isEditing = true;
+  
+  // Кэш для Future редактора, чтобы избежать бесконечного цикла
+  Future<Widget>? _editorFuture;
+  NoteController? _cachedNoteController;
 
   @override
   void initState() {
@@ -158,8 +163,33 @@ class _NotePageState extends State<NotePage> {
           return _buildReadOnlyContent(noteController);
         }
 
-        // Иначе показываем редактор (для новых заметок или найденных заметок)
-        return _buildEditor(noteController);
+        // Проверяем, нужно ли создать новый Future для редактора
+        if (_editorFuture == null || _cachedNoteController != noteController) {
+          _cachedNoteController = noteController;
+          _editorFuture = _buildEditor(noteController);
+        }
+
+        // Показываем редактор (для новых заметок или найденных заметок)
+        return FutureBuilder<Widget>(
+          future: _editorFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+            
+            if (snapshot.hasError) {
+              return Center(
+                child: Text('Ошибка загрузки редактора: ${snapshot.error}'),
+              );
+            }
+            
+            return snapshot.data ?? const Center(
+              child: Text('Не удалось загрузить редактор'),
+            );
+          },
+        );
       },
     );
   }
@@ -217,7 +247,7 @@ class _NotePageState extends State<NotePage> {
   }
 
   /// Построить редактор заметки
-  Widget _buildEditor(NoteController noteController) {
+  Future<Widget> _buildEditor(NoteController noteController) async {
     final isExistingNote = noteController.currentNote != null;
     
     // Определяем содержимое для передачи в редактор
@@ -230,7 +260,7 @@ class _NotePageState extends State<NotePage> {
         : _currentImages;  // Для новой заметки используем локальное состояние
     
     // Получаем ключ заметки для расшифровки изображений
-    final noteKey = isExistingNote ? noteController.decryptedNoteKey : null;
+    final noteKey = isExistingNote ? await noteController.decryptedNoteKey : null;
     
     return QuillNoteEditor(
       key: _editorKey,
@@ -240,15 +270,22 @@ class _NotePageState extends State<NotePage> {
       isExistingNote: isExistingNote, // Передаем информацию о типе заметки
       noteKey: noteKey, // Передаем ключ заметки для расшифровки изображений
       onChanged: (content, images) {
-        setState(() {
-          _currentContent = content;
-          _currentImages = images;
-        });
+        // Проверяем, действительно ли изменились данные
+        bool contentChanged = !_mapsEqual(_currentContent, content);
+        bool imagesChanged = _currentImages.length != images.length || 
+                           !_imagesEqual(_currentImages, images);
         
-        // Обновляем временные данные в контроллере
-        noteController.updateTempData(content, images);
-        
-        print('NotePage: setState выполнен');
+        if (contentChanged || imagesChanged) {
+          setState(() {
+            _currentContent = content;
+            _currentImages = images;
+          });
+          
+          // Обновляем временные данные в контроллере
+          noteController.updateTempData(content, images);
+          
+          print('NotePage: setState выполнен (реальные изменения)');
+        }
       },
       isReadOnly: false,
       onEncryptPressed: isExistingNote ? null : () => _showEncryptDialog(noteController, Provider.of<MasterKeyController>(context, listen: false)),
@@ -268,6 +305,28 @@ class _NotePageState extends State<NotePage> {
         print('NotePage: Заметка сохранена, флаг изменений сброшен');
       },
     );
+  }
+
+  /// Сравнить два Map на равенство
+  bool _mapsEqual(Map<String, dynamic>? a, Map<String, dynamic>? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+    
+    for (final key in a.keys) {
+      if (!b.containsKey(key)) return false;
+      if (a[key] != b[key]) return false;
+    }
+    return true;
+  }
+
+  /// Сравнить два списка изображений на равенство
+  bool _imagesEqual(List<NoteImage> a, List<NoteImage> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
   }
 
   /// Переключить режим редактирования
@@ -369,10 +428,8 @@ class _NotePageState extends State<NotePage> {
       return;
     }
 
-    // Создаем или обновляем заметку
-    final content = _currentContent;
-    
-    if (content.isEmpty && _currentImages.isEmpty) {
+    // Проверяем, не пустое ли содержимое
+    if (ValidationUtils.isQuillContentEmpty(_currentContent) && _currentImages.isEmpty) {
       if (mounted) {
         await NotificationService().showWarning(
           context: context,
@@ -414,10 +471,8 @@ class _NotePageState extends State<NotePage> {
       return;
     }
 
-    // Создаем или обновляем заметку
-    final content = _currentContent;
-    
-    if (content.isEmpty && _currentImages.isEmpty) {
+    // Проверяем, не пустое ли содержимое
+    if (ValidationUtils.isQuillContentEmpty(_currentContent) && _currentImages.isEmpty) {
       if (mounted) {
         await NotificationService().showWarning(
           context: context,

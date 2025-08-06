@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-import 'dart:typed_data';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../../../shared/services/vibration_service.dart';
@@ -601,6 +601,223 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
     print('QuillNoteEditor: onEditModeChanged вызван с _isEditing = $_isEditing');
   }
 
+  /// Обработать вставку текста с применением стилей окружающего текста
+  Future<void> _handlePasteWithSurroundingStyles() async {
+    try {
+      // Получаем данные из буфера обмена
+      final ClipboardData? clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      if (clipboardData?.text == null || clipboardData!.text!.isEmpty) {
+        print('QuillNoteEditor: буфер обмена пуст или содержит не текстовые данные');
+        return;
+      }
+
+      final String textToPaste = clipboardData.text!;
+      print('QuillNoteEditor: получен текст для вставки: "$textToPaste"');
+
+      // Получаем текущую позицию курсора
+      final TextSelection selection = _controller.selection;
+      final int insertPosition = selection.baseOffset;
+      
+      print('QuillNoteEditor: позиция вставки: $insertPosition');
+
+      // Получаем стили окружающего текста в позиции вставки
+      final Style surroundingStyle = _getSurroundingStyle(insertPosition);
+      print('QuillNoteEditor: стили окружающего текста: $surroundingStyle');
+
+      // Очищаем текст от лишних символов новой строки в начале и конце
+      final String cleanedText = _cleanTextForPaste(textToPaste);
+      print('QuillNoteEditor: очищенный текст: "$cleanedText"');
+
+      // Вставляем текст с применением стилей окружающего текста
+      _insertTextWithStyle(cleanedText, insertPosition, surroundingStyle);
+
+      // Вибрация при успешной вставке
+      VibrationService().successVibration();
+
+    } catch (e) {
+      print('QuillNoteEditor: ошибка при обработке вставки: $e');
+      // Вибрация при ошибке
+      VibrationService().errorVibration();
+    }
+  }
+
+  /// Получить стили окружающего текста в указанной позиции
+  Style _getSurroundingStyle(int position) {
+    try {
+      // Получаем текущий документ
+      final Document document = _controller.document;
+      
+      // Если документ пустой, возвращаем пустой стиль
+      if (document.length <= 1) {
+        return Style();
+      }
+
+      // Ограничиваем позицию в пределах документа
+      final int safePosition = position.clamp(0, document.length - 1);
+      
+      // Получаем стили в позиции курсора используя collectStyle
+      final Style styleAtPosition = document.collectStyle(safePosition, 1);
+      
+      // Если стили в позиции не найдены, ищем в ближайшей позиции
+      if (styleAtPosition.isEmpty) {
+        // Ищем стили в предыдущей позиции
+        if (safePosition > 0) {
+          final Style prevStyle = document.collectStyle(safePosition - 1, 1);
+          if (prevStyle.isNotEmpty) {
+            print('QuillNoteEditor: найдены стили в предыдущей позиции: $prevStyle');
+            return prevStyle;
+          }
+        }
+        
+        // Ищем стили в следующей позиции
+        if (safePosition < document.length - 1) {
+          final Style nextStyle = document.collectStyle(safePosition + 1, 1);
+          if (nextStyle.isNotEmpty) {
+            print('QuillNoteEditor: найдены стили в следующей позиции: $nextStyle');
+            return nextStyle;
+          }
+        }
+        
+        // Если стили не найдены, возвращаем пустой стиль
+        print('QuillNoteEditor: стили не найдены, используем пустой стиль');
+        return Style();
+      }
+
+      print('QuillNoteEditor: найдены стили в позиции: $styleAtPosition');
+      return styleAtPosition;
+      
+    } catch (e) {
+      print('QuillNoteEditor: ошибка при получении стилей: $e');
+      return Style();
+    }
+  }
+
+  /// Очистить текст от лишних символов для вставки
+  String _cleanTextForPaste(String text) {
+    // Удаляем лишние пробелы и символы новой строки в начале и конце
+    String cleaned = text.trim();
+    
+    // Заменяем множественные пробелы на одинарные
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ');
+    
+    // Заменяем множественные символы новой строки на одинарные
+    cleaned = cleaned.replaceAll(RegExp(r'\n+'), '\n');
+    
+    return cleaned;
+  }
+
+  /// Вставить текст с применением стилей
+  void _insertTextWithStyle(String text, int position, Style style) {
+    try {
+      // Если текст пустой, ничего не вставляем
+      if (text.isEmpty) {
+        print('QuillNoteEditor: текст для вставки пустой');
+        return;
+      }
+
+      // Устанавливаем позицию курсора
+      _controller.updateSelection(
+        TextSelection.collapsed(offset: position),
+        ChangeSource.remote,
+      );
+
+      // Вставляем текст
+      _controller.document.insert(position, text);
+      
+      // Применяем стили к вставленному тексту
+      if (style.isNotEmpty) {
+        // Применяем каждый атрибут стиля отдельно
+        style.attributes.forEach((key, attribute) {
+          _controller.formatText(position, text.length, attribute);
+        });
+        print('QuillNoteEditor: применены стили к вставленному тексту: $style');
+      }
+
+      // Устанавливаем курсор после вставленного текста
+      final int newPosition = position + text.length;
+      _controller.updateSelection(
+        TextSelection.collapsed(offset: newPosition),
+        ChangeSource.remote,
+      );
+
+      print('QuillNoteEditor: текст успешно вставлен с позиции $position до $newPosition');
+      
+    } catch (e) {
+      print('QuillNoteEditor: ошибка при вставке текста: $e');
+    }
+  }
+
+  /// Показать кастомное меню вставки для мобильных устройств
+  void _showCustomPasteMenu() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.content_paste),
+                title: Text(AppLocalizations.of(context).pasteWithStyles),
+                subtitle: Text(AppLocalizations.of(context).pasteWithStylesDescription),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handlePasteWithSurroundingStyles();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.content_paste_go),
+                title: Text(AppLocalizations.of(context).pasteAsPlainText),
+                subtitle: Text(AppLocalizations.of(context).pasteAsPlainTextDescription),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handlePasteAsPlainText();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Обработать вставку как обычный текст (без применения стилей)
+  Future<void> _handlePasteAsPlainText() async {
+    try {
+      // Получаем данные из буфера обмена
+      final ClipboardData? clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      if (clipboardData?.text == null || clipboardData!.text!.isEmpty) {
+        print('QuillNoteEditor: буфер обмена пуст или содержит не текстовые данные');
+        return;
+      }
+
+      final String textToPaste = clipboardData.text!;
+      print('QuillNoteEditor: получен текст для вставки как обычный текст: "$textToPaste"');
+
+      // Получаем текущую позицию курсора
+      final TextSelection selection = _controller.selection;
+      final int insertPosition = selection.baseOffset;
+      
+      print('QuillNoteEditor: позиция вставки: $insertPosition');
+
+      // Очищаем текст от лишних символов
+      final String cleanedText = _cleanTextForPaste(textToPaste);
+      print('QuillNoteEditor: очищенный текст: "$cleanedText"');
+
+      // Вставляем текст без применения стилей
+      _insertTextWithStyle(cleanedText, insertPosition, Style());
+
+      // Вибрация при успешной вставке
+      VibrationService().successVibration();
+
+    } catch (e) {
+      print('QuillNoteEditor: ошибка при обработке вставки обычного текста: $e');
+      // Вибрация при ошибке
+      VibrationService().errorVibration();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     print('QuillNoteEditor: build вызван');
@@ -619,98 +836,122 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
           children: [
             // Редактор
             Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  print('QuillNoteEditor: GestureDetector onTap вызван');
-                  print('QuillNoteEditor: _isEditing = $_isEditing');
-                  print('QuillNoteEditor: widget.isReadOnly = ${widget.isReadOnly}');
-                  print('QuillNoteEditor: _controller.readOnly = ${_controller.readOnly}');
-                  
-                  // При клике по тексту в режиме просмотра переключаем в режим редактирования
-                  if (!_isEditing && !widget.isReadOnly) {
-                    print('QuillNoteEditor: переключаем в режим редактирования через GestureDetector');
-                    toggleEditMode();
-                  } else {
-                    print('QuillNoteEditor: клик проигнорирован (уже в режиме редактирования или только для чтения)');
+              child: KeyboardListener(
+                focusNode: FocusNode(),
+                onKeyEvent: (KeyEvent event) {
+                  // Проверяем, что это событие нажатия клавиши и мы в режиме редактирования
+                  if (event is KeyDownEvent && _isEditing && !widget.isReadOnly) {
+                    // Проверяем комбинацию Cmd+V (macOS) или Ctrl+V (другие платформы)
+                    final bool isPasteCommand = (HardwareKeyboard.instance.isMetaPressed || HardwareKeyboard.instance.isControlPressed) && 
+                                               event.logicalKey == LogicalKeyboardKey.keyV;
+                    
+                    if (isPasteCommand) {
+                      print('QuillNoteEditor: обнаружена команда вставки');
+                      // Перехватываем стандартную вставку и используем нашу кастомную
+                      _handlePasteWithSurroundingStyles();
+                    }
                   }
                 },
-                child: QuillEditor.basic(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  config: QuillEditorConfig(
-                    autoFocus: _isEditing && !widget.isReadOnly,
-                    padding: const EdgeInsets.all(20),
-                    showCursor: _isEditing && !widget.isReadOnly,
-                    embedBuilders: [
-                      ImageEmbedBuilder(
-                        imageCache: _imageCache,
-                        noteKey: widget.noteKey,
-                        onImageTap: (imageId) {
-                          // Переход в галерею изображений
-                          print('QuillNoteEditor: клик по изображению $imageId');
-                          _showImageGallery(imageId);
-                        },
-                      ),
-                    ],
-                    customStyles: DefaultStyles(
-                      h1: DefaultTextBlockStyle(
-                        Theme.of(context).textTheme.headlineLarge!.copyWith(
-                          fontWeight: FontWeight.bold,
-                          height: 1.2,
+                child: GestureDetector(
+                  onTap: () {
+                    print('QuillNoteEditor: GestureDetector onTap вызван');
+                    print('QuillNoteEditor: _isEditing = $_isEditing');
+                    print('QuillNoteEditor: widget.isReadOnly = ${widget.isReadOnly}');
+                    print('QuillNoteEditor: _controller.readOnly = ${_controller.readOnly}');
+                    
+                    // При клике по тексту в режиме просмотра переключаем в режим редактирования
+                    if (!_isEditing && !widget.isReadOnly) {
+                      print('QuillNoteEditor: переключаем в режим редактирования через GestureDetector');
+                      toggleEditMode();
+                    } else {
+                      print('QuillNoteEditor: клик проигнорирован (уже в режиме редактирования или только для чтения)');
+                    }
+                  },
+                  onLongPress: () {
+                    // Обработчик длительного нажатия для мобильных устройств
+                    if (_isEditing && !widget.isReadOnly) {
+                      print('QuillNoteEditor: длительное нажатие в режиме редактирования');
+                      _showCustomPasteMenu();
+                    }
+                  },
+                  child: QuillEditor.basic(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    config: QuillEditorConfig(
+                      autoFocus: _isEditing && !widget.isReadOnly,
+                      padding: const EdgeInsets.all(20),
+                      showCursor: _isEditing && !widget.isReadOnly,
+                      embedBuilders: [
+                        ImageEmbedBuilder(
+                          imageCache: _imageCache,
+                          noteKey: widget.noteKey,
+                          onImageTap: (imageId) {
+                            // Переход в галерею изображений
+                            print('QuillNoteEditor: клик по изображению $imageId');
+                            _showImageGallery(imageId);
+                          },
                         ),
-                        const HorizontalSpacing(0, 0),
-                        const VerticalSpacing(8, 8),
-                        const VerticalSpacing(0, 0),
-                        null,
+                      ],
+                      customStyles: DefaultStyles(
+                        h1: DefaultTextBlockStyle(
+                          Theme.of(context).textTheme.headlineLarge!.copyWith(
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                          const HorizontalSpacing(0, 0),
+                          const VerticalSpacing(8, 8),
+                          const VerticalSpacing(0, 0),
+                          null,
+                        ),
                       ),
+                      onTapDown: (details, p1) {
+                        print('QuillNoteEditor: onTapDown вызван');
+                        print('QuillNoteEditor: _isEditing = $_isEditing');
+                        print('QuillNoteEditor: widget.isReadOnly = ${widget.isReadOnly}');
+                        print('QuillNoteEditor: _controller.readOnly = ${_controller.readOnly}');
+                        
+                        // Если мы в режиме редактирования, разрешаем все клики
+                        if (_isEditing && !widget.isReadOnly) {
+                          print('QuillNoteEditor: разрешаем обычный клик в режиме редактирования');
+                          return false; // Разрешаем дальнейшую обработку для навигации по тексту и кликов по изображениям
+                        }
+                        
+                        // Если мы в режиме просмотра, переключаем в режим редактирования
+                        if (!_isEditing && !widget.isReadOnly) {
+                          print('QuillNoteEditor: переключаем в режим редактирования');
+                          
+                          // Сохраняем позицию клика для установки курсора
+                          final tapOffset = p1(details.globalPosition).offset;
+                          print('QuillNoteEditor: позиция клика = $tapOffset');
+                          
+                          // Находим ближайшую валидную позицию для курсора
+                          final documentLength = _controller.document.length;
+                          final targetOffset = _findNearestValidPosition(tapOffset, documentLength);
+                          
+                          print('QuillNoteEditor: устанавливаем курсор в позицию $targetOffset');
+                          _controller.updateSelection(
+                            TextSelection.collapsed(offset: targetOffset),
+                            ChangeSource.remote,
+                          );
+                          
+                          // Затем переключаем режим
+                          toggleEditMode();
+                          
+                          // И фокусируемся
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted && _isEditing) {
+                              _focusNode.requestFocus();
+                            }
+                          });
+                          
+                          return true; // Обрабатываем событие
+                        }
+                        
+                        // В остальных случаях (только для чтения) игнорируем
+                        print('QuillNoteEditor: клик проигнорирован (только для чтения)');
+                        return false;
+                      },
                     ),
-                    onTapDown: (details, p1) {
-                      print('QuillNoteEditor: onTapDown вызван');
-                      print('QuillNoteEditor: _isEditing = $_isEditing');
-                      print('QuillNoteEditor: widget.isReadOnly = ${widget.isReadOnly}');
-                      print('QuillNoteEditor: _controller.readOnly = ${_controller.readOnly}');
-                      
-                      // Если мы в режиме редактирования, разрешаем все клики
-                      if (_isEditing && !widget.isReadOnly) {
-                        print('QuillNoteEditor: разрешаем обычный клик в режиме редактирования');
-                        return false; // Разрешаем дальнейшую обработку для навигации по тексту и кликов по изображениям
-                      }
-                      
-                      // Если мы в режиме просмотра, переключаем в режим редактирования
-                      if (!_isEditing && !widget.isReadOnly) {
-                        print('QuillNoteEditor: переключаем в режим редактирования');
-                        
-                        // Сохраняем позицию клика для установки курсора
-                        final tapOffset = p1(details.globalPosition).offset;
-                        print('QuillNoteEditor: позиция клика = $tapOffset');
-                        
-                        // Находим ближайшую валидную позицию для курсора
-                        final documentLength = _controller.document.length;
-                        final targetOffset = _findNearestValidPosition(tapOffset, documentLength);
-                        
-                        print('QuillNoteEditor: устанавливаем курсор в позицию $targetOffset');
-                        _controller.updateSelection(
-                          TextSelection.collapsed(offset: targetOffset),
-                          ChangeSource.remote,
-                        );
-                        
-                        // Затем переключаем режим
-                        toggleEditMode();
-                        
-                        // И фокусируемся
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted && _isEditing) {
-                            _focusNode.requestFocus();
-                          }
-                        });
-                        
-                        return true; // Обрабатываем событие
-                      }
-                      
-                      // В остальных случаях (только для чтения) игнорируем
-                      print('QuillNoteEditor: клик проигнорирован (только для чтения)');
-                      return false;
-                    },
                   ),
                 ),
               ),
