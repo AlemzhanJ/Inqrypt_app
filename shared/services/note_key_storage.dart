@@ -24,9 +24,7 @@ class NoteKeyStorage {
         value: noteKey,
       );
       
-      print('NoteKeyStorage: Ключ заметки $noteId сохранен в secure storage');
     } catch (e) {
-      print('NoteKeyStorage: Ошибка сохранения ключа заметки: $e');
       rethrow;
     }
   }
@@ -38,10 +36,8 @@ class NoteKeyStorage {
   static Future<String?> getNoteKey(String noteId) async {
     try {
       final noteKey = await _storage.read(key: '$_keyPrefix$noteId');
-      print('NoteKeyStorage: Ключ заметки $noteId получен из secure storage');
       return noteKey;
     } catch (e) {
-      print('NoteKeyStorage: Ошибка получения ключа заметки: $e');
       return null;
     }
   }
@@ -52,10 +48,8 @@ class NoteKeyStorage {
   static Future<String?> getCurrentNoteKey() async {
     try {
       final noteKey = await _storage.read(key: _currentNoteKey);
-      print('NoteKeyStorage: Текущий ключ заметки получен из secure storage');
       return noteKey;
     } catch (e) {
-      print('NoteKeyStorage: Ошибка получения текущего ключа заметки: $e');
       return null;
     }
   }
@@ -66,9 +60,9 @@ class NoteKeyStorage {
   static Future<void> removeNoteKey(String noteId) async {
     try {
       await _storage.delete(key: '$_keyPrefix$noteId');
-      print('NoteKeyStorage: Ключ заметки $noteId удален из secure storage');
     } catch (e) {
-      print('NoteKeyStorage: Ошибка удаления ключа заметки: $e');
+      // Игнорируем ошибки при удалении ключей
+      // Это не критично для работы приложения
     }
   }
   
@@ -76,9 +70,9 @@ class NoteKeyStorage {
   static Future<void> removeCurrentNoteKey() async {
     try {
       await _storage.delete(key: _currentNoteKey);
-      print('NoteKeyStorage: Текущий ключ заметки удален из secure storage');
     } catch (e) {
-      print('NoteKeyStorage: Ошибка удаления текущего ключа заметки: $e');
+      // Игнорируем ошибки при удалении текущего ключа
+      // Это не критично для работы приложения
     }
   }
   
@@ -97,9 +91,9 @@ class NoteKeyStorage {
         }
       }
       
-      print('NoteKeyStorage: Все ключи заметок очищены из secure storage');
     } catch (e) {
-      print('NoteKeyStorage: Ошибка очистки ключей заметок: $e');
+      // Игнорируем ошибки при очистке ключей
+      // Это не критично для работы приложения
     }
   }
   

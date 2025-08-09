@@ -97,6 +97,43 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get deleteAllNotesSubtitle => '';
   
+  // Удаление последней заметки
+  @override
+  String get deleteLastNoteTitle => 'Удалить последнюю заметку';
+  
+  @override
+  String get deleteLastNoteSubtitle => '';
+  
+  @override
+  String get deleteLastNoteActionTitle => 'Удалить последнюю заметку';
+  
+  @override
+  String get deleteLastNoteDialogTitle => 'Удалить последнюю заметку?';
+  
+  @override
+  String get deleteLastNoteDialogContent => 'Это действие безвозвратно удалит последнюю созданную заметку. Это действие нельзя отменить.\n\nПродолжить?';
+  
+  @override
+  String get deleteLastNoteDialogCancelButton => 'Отмена';
+  
+  @override
+  String get deleteLastNoteDialogConfirmButton => 'Удалить';
+  
+  @override
+  String get deleteLastNoteAuthenticationReason => 'Подтвердите удаление последней заметки';
+  
+  @override
+  String get deleteLastNoteAuthenticationError => 'Аутентификация не удалась';
+  
+  @override
+  String get deleteLastNoteNoNotesMessage => 'Нет заметок для удаления';
+  
+  @override
+  String get deleteLastNoteSuccessMessage => 'Последняя заметка удалена';
+  
+  @override
+  String get deleteLastNoteError => 'Ошибка удаления последней заметки';
+  
   // Главная страница - дополнительные элементы
   @override
   String get securityStatusTitle => 'Безопасность';
@@ -273,6 +310,33 @@ class AppLocalizationsRu extends AppLocalizations {
   
   @override
   String get confirmDeleteNote => 'Вы уверены, что хотите удалить эту заметку?';
+  
+  @override
+  String get deleteNoteDialogTitle => 'Удалить заметку?';
+  
+  @override
+  String get deleteNoteDialogContent => 'Это действие безвозвратно удалит эту заметку. Это действие нельзя отменить.\n\nПродолжить?';
+  
+  @override
+  String get deleteNoteDialogCancelButton => 'Отмена';
+  
+  @override
+  String get deleteNoteDialogConfirmButton => 'Удалить';
+  
+  @override
+  String get deleteNoteAuthenticationReason => 'Подтвердите удаление заметки';
+  
+  @override
+  String get deleteNoteAuthenticationError => 'Аутентификация не удалась';
+  
+  @override
+  String get deleteNoteSuccessMessage => 'Заметка удалена';
+  
+  @override
+  String get deleteNoteError => 'Ошибка удаления заметки';
+  
+  @override
+  String get deleteNoteButtonText => 'Удалить';
   
   @override
   String get confirmDeleteImage => 'Вы уверены, что хотите удалить это изображение?';
@@ -601,7 +665,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get noteFoundMessage => 'Заметка найдена!';
   
   @override
-  String get demoModeScanningMessage => 'Демо-режим: Имитация сканирования';
+  String get demoModeScanningMessage => 'Имитация сканирования';
   
   @override
   String get demoModeNoteSavedMessage => 'Демо-режим: Заметка сохранена';
@@ -638,4 +702,38 @@ class AppLocalizationsRu extends AppLocalizations {
   // Галерея изображений
   @override
   String imageGalleryCounter(int current, int total) => '$current из $total';
+  
+  // Support Us
+  @override
+  String get supportUsTitle => 'Поддержать нас';
+  
+  @override
+  String get supportUsDescription => 'Это добровольная поддержка. Покупка ничего не открывает — все функции бесплатны. Вы помогаете опенсорс-проекту жить.';
+  
+  @override
+  String get supportUsButtonText => 'Поддержать нас';
+  
+  @override
+  String get supporterBadgeText => 'Supporter';
+  
+  @override
+  String get supporterThankYouMessage => 'Спасибо за поддержку Inqrypt!';
+  
+  @override
+  String get purchaseSuccessMessage => 'Спасибо за вашу поддержку!';
+  
+  @override
+  String get purchaseErrorMessage => 'Покупка не удалась. Попробуйте еще раз.';
+  
+  @override
+  String get purchaseNotAvailableMessage => 'Встроенные покупки недоступны.';
+
+  @override
+  String get restorePurchasesButtonText => 'Восстановить покупки';
+
+  @override
+  String get processingText => 'Обработка...';
+
+  @override
+  String get purchasesRestoredMessage => 'Покупки восстановлены';
 } 

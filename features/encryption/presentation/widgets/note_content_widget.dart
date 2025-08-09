@@ -85,9 +85,6 @@ class _NoteContentWidgetState extends State<NoteContentWidget> {
   /// Загрузить конкретное изображение
   Future<void> _loadImage(NoteImage image) async {
     try {
-      print('NoteContentWidget: Загружаем изображение ${image.id}');
-      print('NoteContentWidget: Путь: ${image.imagePath}');
-      print('NoteContentWidget: Ключ заметки: ${widget.noteKey.substring(0, 10)}...');
       
       final imageService = ImageService();
       final decryptedBytes = await imageService.decryptImage(
@@ -95,7 +92,6 @@ class _NoteContentWidgetState extends State<NoteContentWidget> {
         widget.noteKey,
       );
 
-      print('NoteContentWidget: Результат расшифровки: ${decryptedBytes?.length ?? 0} байт');
 
       // Проверяем валидность данных изображения
       if (decryptedBytes != null && decryptedBytes.isNotEmpty) {
@@ -105,7 +101,6 @@ class _NoteContentWidgetState extends State<NoteContentWidget> {
           // JPEG: FF D8
           if (decryptedBytes[0] == 0xFF && decryptedBytes[1] == 0xD8) {
             isValidImage = true;
-            print('NoteContentWidget: Обнаружен JPEG формат');
           }
           // PNG: 89 50 4E 47
           else if (decryptedBytes.length >= 4 && 
@@ -114,13 +109,10 @@ class _NoteContentWidgetState extends State<NoteContentWidget> {
                    decryptedBytes[2] == 0x4E && 
                    decryptedBytes[3] == 0x47) {
             isValidImage = true;
-            print('NoteContentWidget: Обнаружен PNG формат');
           }
         }
         
         if (!isValidImage) {
-          print('NoteContentWidget: Неверный формат изображения для ${image.id}');
-          print('NoteContentWidget: Первые байты: ${decryptedBytes.take(8).map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
         }
         
         if (mounted) {
@@ -129,7 +121,6 @@ class _NoteContentWidgetState extends State<NoteContentWidget> {
           });
         }
       } else {
-        print('NoteContentWidget: Расшифрованные данные пусты для ${image.id}');
         if (mounted) {
           setState(() {
             _decryptedImages[image.id] = null;
@@ -137,7 +128,6 @@ class _NoteContentWidgetState extends State<NoteContentWidget> {
         }
       }
     } catch (e) {
-      print('NoteContentWidget: Ошибка загрузки изображения ${image.id}: $e');
       if (mounted) {
         setState(() {
           _decryptedImages[image.id] = null;
@@ -160,9 +150,6 @@ class _NoteContentWidgetState extends State<NoteContentWidget> {
     final isLoading = _loadingImages[image.id] ?? false;
     final imageData = _decryptedImages[image.id];
     
-    print('NoteContentWidget: _buildImageWidget для ${image.id}');
-    print('NoteContentWidget: isLoading = $isLoading');
-    print('NoteContentWidget: imageData = ${imageData?.length ?? 0} байт');
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -192,7 +179,6 @@ class _NoteContentWidgetState extends State<NoteContentWidget> {
                         fit: BoxFit.contain, // Сохраняем пропорции
                         width: double.infinity,
                         errorBuilder: (context, error, stackTrace) {
-                          print('NoteContentWidget: Ошибка отображения изображения ${image.id}: $error');
                           return Container(
                             height: 200,
                             decoration: BoxDecoration(

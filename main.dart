@@ -19,6 +19,7 @@ import 'features/encryption/presentation/controllers/master_key_controller.dart'
 import 'shared/services/vibration_service.dart';
 import 'shared/services/notification_service.dart';
 import 'shared/services/biometric_service.dart';
+import 'shared/widgets/support_us_section.dart';
 
 void main() {
   runApp(const InqryptApp());
@@ -224,6 +225,16 @@ class _HomePageState extends State<HomePage> {
               
               const SizedBox(height: 32),
               
+              // Кнопка удаления последней заметки
+              _OrangeDangerActionButton(
+                icon: Icons.delete,
+                title: l10n.deleteLastNoteActionTitle,
+                subtitle: '',
+                onTap: () => _showDeleteLastNoteDialog(context),
+              ),
+              
+              const SizedBox(height: 16),
+              
               // Кнопка удаления всех заметок
               _DangerActionButton(
                 icon: Icons.delete_forever,
@@ -234,7 +245,7 @@ class _HomePageState extends State<HomePage> {
               
               const SizedBox(height: 32),
               
-              // Демо-режим для App Review (перемещен в самый низ)
+              // Демо-режим для App Review
               DemoActionButton(
                 icon: Icons.play_arrow,
                 title: l10n.demoInfoTitle,
@@ -250,6 +261,11 @@ class _HomePageState extends State<HomePage> {
                   }
                 },
               ),
+              
+              const SizedBox(height: 16),
+              
+              // Support Us секция (в самом низу)
+              const SupportUsSection(),
               
               // Убираем лишний отступ внизу, добавляем минимальный отступ для системных элементов
               const SizedBox(height: 20),
@@ -386,6 +402,9 @@ Future<void> _showDeleteAllNotesDialog(BuildContext context) async {
 
 /// Удалить все заметки
 Future<void> _deleteAllNotes(BuildContext context) async {
+  // Сохраняем локализацию в переменную перед асинхронными операциями
+  final l10n = AppLocalizations.of(context);
+  
   try {
     // Показываем индикатор загрузки
     showDialog(
@@ -396,9 +415,28 @@ Future<void> _deleteAllNotes(BuildContext context) async {
       ),
     );
 
+    // Получаем все заметки
+    final noteRepository = NoteRepositoryImpl(NoteStorage());
+    final notes = await noteRepository.getAllNotes();
+
+    if (notes.isEmpty) {
+      // Закрываем индикатор загрузки
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (context.mounted) {
+        await NotificationService().showWarning(
+          context: context,
+          message: l10n.deleteLastNoteNoNotesMessage,
+        );
+      }
+      return;
+    }
+
     // Запрашиваем биометрию
     final isAuthenticated = await BiometricService.authenticate(
-      reason: AppLocalizations.of(context).deleteAllNotesAuthenticationReason,
+      reason: l10n.deleteAllNotesAuthenticationReason,
     );
 
     // Закрываем индикатор загрузки
@@ -410,16 +448,13 @@ Future<void> _deleteAllNotes(BuildContext context) async {
       if (context.mounted) {
         await NotificationService().showError(
           context: context,
-          message: AppLocalizations.of(context).deleteAllNotesAuthenticationError,
+          message: l10n.deleteAllNotesAuthenticationError,
         );
       }
       return;
     }
 
     // Удаляем все заметки
-    final noteRepository = NoteRepositoryImpl(NoteStorage());
-    final notes = await noteRepository.getAllNotes();
-    
     for (final note in notes) {
       await noteRepository.deleteNote(note.id);
     }
@@ -427,7 +462,7 @@ Future<void> _deleteAllNotes(BuildContext context) async {
     if (context.mounted) {
       await NotificationService().showWarning(
         context: context,
-        message: AppLocalizations.of(context).deleteAllNotesSuccessMessage(notes.length),
+        message: l10n.deleteAllNotesSuccessMessage(notes.length),
       );
     }
   } catch (e) {
@@ -439,11 +474,127 @@ Future<void> _deleteAllNotes(BuildContext context) async {
     if (context.mounted) {
       await NotificationService().showError(
         context: context,
-        message: AppLocalizations.of(context).deleteAllNotesError(e.toString()),
+        message: l10n.deleteAllNotesError(e.toString()),
       );
     }
   }
 } 
+
+/// Показать диалог удаления последней заметки
+Future<void> _showDeleteLastNoteDialog(BuildContext context) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(AppLocalizations.of(context).deleteLastNoteDialogTitle),
+      content: Text(
+        AppLocalizations.of(context).deleteLastNoteDialogContent,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () async {
+            await VibrationService().navigationBackVibration();
+            if (context.mounted) {
+              Navigator.of(context).pop(false);
+            }
+          },
+          child: Text(AppLocalizations.of(context).deleteLastNoteDialogCancelButton),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: Text(AppLocalizations.of(context).deleteLastNoteDialogConfirmButton),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed == true) {
+    if (context.mounted) {
+      await _deleteLastNote(context);
+    }
+  }
+}
+
+/// Удалить последнюю заметку
+Future<void> _deleteLastNote(BuildContext context) async {
+  // Сохраняем локализацию в переменную перед асинхронными операциями
+  final l10n = AppLocalizations.of(context);
+  
+  try {
+    // Показываем индикатор загрузки
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    // Получаем последнюю заметку
+    final noteRepository = NoteRepositoryImpl(NoteStorage());
+    final lastNote = await noteRepository.getLastNote();
+
+    if (lastNote == null) {
+      // Закрываем индикатор загрузки
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (context.mounted) {
+        await NotificationService().showWarning(
+          context: context,
+          message: l10n.deleteLastNoteNoNotesMessage,
+        );
+      }
+      return;
+    }
+
+    // Запрашиваем биометрию
+    final isAuthenticated = await BiometricService.authenticate(
+      reason: l10n.deleteLastNoteAuthenticationReason,
+    );
+
+    // Закрываем индикатор загрузки
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
+
+    if (!isAuthenticated) {
+      if (context.mounted) {
+        await NotificationService().showError(
+          context: context,
+          message: l10n.deleteLastNoteAuthenticationError,
+        );
+      }
+      return;
+    }
+
+    // Удаляем последнюю заметку
+    await noteRepository.deleteNote(lastNote.id);
+
+    if (context.mounted) {
+      await NotificationService().showWarning(
+        context: context,
+        message: l10n.deleteLastNoteSuccessMessage,
+      );
+    }
+  } catch (e) {
+    // Закрываем индикатор загрузки если он открыт
+    if (context.mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    if (context.mounted) {
+      await NotificationService().showError(
+        context: context,
+        message: l10n.deleteLastNoteError,
+      );
+    }
+  }
+}
 
 class _DangerActionButton extends StatelessWidget {
   final IconData icon;
@@ -521,6 +672,93 @@ class _DangerActionButton extends StatelessWidget {
                 Icon(
                   Icons.arrow_forward_ios,
                   color: Colors.red.withValues(alpha: 0.7),
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+} 
+
+class _OrangeDangerActionButton extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _OrangeDangerActionButton({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.orange,
+                        ),
+                      ),
+                      if (subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.orange.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.orange.withValues(alpha: 0.7),
                   size: 18,
                 ),
               ],

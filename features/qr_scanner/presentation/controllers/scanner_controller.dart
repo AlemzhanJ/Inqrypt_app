@@ -55,40 +55,35 @@ class ScannerController extends ChangeNotifier {
       _setProcessing(true);
       _scannedData = data;
       
-      debugPrint('Scanner: Обрабатываем QR-код...');
       
       // Запрашиваем биометрию для доступа к мастер-ключу
-      debugPrint('Scanner: Запрашиваем биометрию...');
+      
       final isAuthenticated = await BiometricService.authenticate(
         reason: l10n.biometricReason,
       );
       
       if (!isAuthenticated) {
-        debugPrint('Scanner: Аутентификация не удалась');
+        
         _setError(l10n.errorAuthenticationFailed);
         return;
       }
       
-      debugPrint('Scanner: Аутентификация успешна, получаем мастер-ключ...');
+      
       // Получаем мастер-ключ
       final masterKey = await _masterKeyRepository.decryptMasterKey();
       if (masterKey == null) {
-        debugPrint('Scanner: Не удалось получить мастер-ключ');
+        
         _setError(l10n.errorMasterKeyAccess);
         return;
       }
       
-      debugPrint('Scanner: Мастер-ключ получен, ищем заметку...');
+      
       // Ищем заметку по зашифрованному ключу
       final result = await _noteRepository.findNoteByEncryptedKey(data, masterKey);
       final note = result.$1;
       final decryptedKey = result.$2;
       
       if (note != null && decryptedKey != null) {
-        debugPrint('Scanner: Заметка найдена!');
-        debugPrint('Scanner: ID заметки: ${note.id}');
-        debugPrint('Scanner: Изображений: ${note.images.length}');
-        debugPrint('Scanner: Расшифрованный ключ: ${decryptedKey.substring(0, 10)}...');
         
         _foundNote = note;
         _decryptedNoteKey = decryptedKey; // Сохраняем расшифрованный ключ
@@ -97,14 +92,12 @@ class ScannerController extends ChangeNotifier {
         // Передаем найденную заметку в контроллер заметок
         _noteController?.loadFoundNote(note, decryptedKey);
       } else {
-        debugPrint('Scanner: Заметка не найдена');
-        debugPrint('Scanner: note = ${note?.id}');
-        debugPrint('Scanner: decryptedKey = ${decryptedKey?.substring(0, 10)}...');
+        
         _setError(l10n.noteNotFound);
       }
       
     } catch (e) {
-      debugPrint('Scanner: Ошибка обработки QR-кода: $e');
+      
       _setError(l10n.errorInvalidQR);
     } finally {
       _setProcessing(false);

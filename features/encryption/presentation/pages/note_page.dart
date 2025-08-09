@@ -9,6 +9,7 @@ import '../../domain/entities/note_image.dart';
 import '../../../../shared/services/notification_service.dart';
 import '../../../../shared/services/vibration_service.dart';
 import '../../../../core/utils/validation_utils.dart';
+import '../../../../shared/services/biometric_service.dart';
 
 /// Страница создания и редактирования заметки в стиле Apple Notes
 class NotePage extends StatefulWidget {
@@ -45,7 +46,6 @@ class _NotePageState extends State<NotePage> {
     } else {
       // ПОЛНАЯ ОЧИСТКА СОСТОЯНИЯ ДЛЯ НОВОЙ ЗАМЕТКИ
       noteController.clearAllContent();
-      print('NotePage: Состояние контроллера полностью очищено для новой заметки');
       
       // Инициализируем локальное состояние пустыми значениями
       setState(() {
@@ -55,7 +55,6 @@ class _NotePageState extends State<NotePage> {
       });
     }
     
-    print('NotePage: Контроллеры инициализированы');
   }
 
   /// Загрузить найденную заметку
@@ -67,10 +66,6 @@ class _NotePageState extends State<NotePage> {
       // Для найденных заметок начинаем в режиме редактирования, чтобы можно было переключаться
       _isEditing = noteController.isFoundNote ? true : noteController.isEditing;
     });
-    print('NotePage: Загружена существующая заметка (ID: ${noteController.currentNote?.id})');
-    print('NotePage: Содержимое заметки: ${noteController.currentNote!.content}');
-    print('NotePage: isFoundNote: ${noteController.isFoundNote}');
-    print('NotePage: _isEditing установлен в: $_isEditing');
   }
 
   @override
@@ -107,20 +102,10 @@ class _NotePageState extends State<NotePage> {
       actions: [
         Consumer2<NoteController, MasterKeyController>(
           builder: (context, noteController, masterKeyController, child) {
-            final hasContent = _currentContent.isNotEmpty || _currentImages.isNotEmpty;
             final hasMasterKey = masterKeyController.hasMasterKey;
             final isEncrypted = noteController.qrCodeData != null;
             
             // Отладочная информация
-            print('NotePage AppBar Debug:');
-            print('  hasContent: $hasContent');
-            print('  hasMasterKey: $hasMasterKey');
-            print('  isEncrypted: $isEncrypted');
-            print('  _currentContent: $_currentContent');
-            print('  _currentImages count: ${_currentImages.length}');
-            print('  isFoundNote: ${noteController.isFoundNote}');
-            print('  _isEditing: $_isEditing');
-            print('  noteController.isEditing: ${noteController.isEditing}');
             
             // Если заметка зашифрована И это НЕ найденная заметка, показываем только кнопку назад
             if (isEncrypted && !noteController.isFoundNote) return const SizedBox.shrink();
@@ -284,25 +269,20 @@ class _NotePageState extends State<NotePage> {
           // Обновляем временные данные в контроллере
           noteController.updateTempData(content, images);
           
-          print('NotePage: setState выполнен (реальные изменения)');
         }
       },
       isReadOnly: false,
       onEncryptPressed: isExistingNote ? null : () => _showEncryptDialog(noteController, Provider.of<MasterKeyController>(context, listen: false)),
       onSavePressed: isExistingNote ? () => _showSaveDialog(noteController, Provider.of<MasterKeyController>(context, listen: false)) : null,
+      onDeletePressed: isExistingNote ? () => _showDeleteDialog(noteController, Provider.of<MasterKeyController>(context, listen: false)) : null,
       onEditModeChanged: (isEditing) {
-        print('NotePage: onEditModeChanged вызван с isEditing = $isEditing');
-        print('NotePage: старый _isEditing = $_isEditing');
         
         setState(() {
           _isEditing = isEditing;
         });
         
-        print('NotePage: новый _isEditing = $_isEditing');
-        print('NotePage: setState выполнен для onEditModeChanged');
       },
       onNoteSaved: () {
-        print('NotePage: Заметка сохранена, флаг изменений сброшен');
       },
     );
   }
@@ -331,23 +311,19 @@ class _NotePageState extends State<NotePage> {
 
   /// Переключить режим редактирования
   void _toggleEditMode() {
-    print('NotePage: _toggleEditMode вызван');
-    print('NotePage: текущий _isEditing = $_isEditing');
-    print('NotePage: _editorKey.currentState = ${_editorKey.currentState}');
     
     if (_editorKey.currentState != null) {
-      print('NotePage: вызываю toggleEditMode на редакторе');
       _editorKey.currentState!.toggleEditMode();
     } else {
-      print('NotePage: ОШИБКА - _editorKey.currentState == null');
     }
   }
 
   Future<void> _showEncryptDialog(NoteController noteController, MasterKeyController masterKeyController) async {
     final l10n = AppLocalizations.of(context);
+    final navigatorContext = context;
     
     final confirmed = await showDialog<bool>(
-      context: context,
+      context: navigatorContext,
       builder: (context) => AlertDialog(
         title: Text(l10n.confirmEncryptNoteTitle),
         content: Text(l10n.confirmEncryptNoteContent),
@@ -355,14 +331,14 @@ class _NotePageState extends State<NotePage> {
           TextButton(
             onPressed: () async {
               await VibrationService().navigationBackVibration();
-              if (context.mounted) {
-                Navigator.of(context).pop(false);
+              if (navigatorContext.mounted) {
+                Navigator.of(navigatorContext).pop(false);
               }
             },
             child: Text(l10n.cancelButtonText),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(navigatorContext).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
@@ -380,9 +356,10 @@ class _NotePageState extends State<NotePage> {
 
   Future<void> _showSaveDialog(NoteController noteController, MasterKeyController masterKeyController) async {
     final l10n = AppLocalizations.of(context);
+    final navigatorContext = context;
     
     final confirmed = await showDialog<bool>(
-      context: context,
+      context: navigatorContext,
       builder: (context) => AlertDialog(
         title: Text(l10n.confirmSaveNoteTitle),
         content: Text(l10n.confirmSaveNoteContent),
@@ -390,14 +367,14 @@ class _NotePageState extends State<NotePage> {
           TextButton(
             onPressed: () async {
               await VibrationService().navigationBackVibration();
-              if (context.mounted) {
-                Navigator.of(context).pop(false);
+              if (navigatorContext.mounted) {
+                Navigator.of(navigatorContext).pop(false);
               }
             },
             child: Text(l10n.cancelButtonText),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(navigatorContext).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
@@ -413,15 +390,52 @@ class _NotePageState extends State<NotePage> {
     }
   }
 
+  Future<void> _showDeleteDialog(NoteController noteController, MasterKeyController masterKeyController) async {
+    final l10n = AppLocalizations.of(context);
+    final navigatorContext = context;
+    
+    final confirmed = await showDialog<bool>(
+      context: navigatorContext,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteNoteDialogTitle),
+        content: Text(l10n.deleteNoteDialogContent),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await VibrationService().navigationBackVibration();
+              if (navigatorContext.mounted) {
+                Navigator.of(navigatorContext).pop(false);
+              }
+            },
+            child: Text(l10n.deleteNoteDialogCancelButton),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(navigatorContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(l10n.deleteNoteDialogConfirmButton),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteNote(noteController, masterKeyController);
+    }
+  }
+
   Future<void> _encryptNote(NoteController noteController, MasterKeyController masterKeyController) async {
     final l10n = AppLocalizations.of(context);
+    final navigatorContext = context;
     
     // Получаем мастер-ключ с аутентификацией
     final masterKey = await masterKeyController.getMasterKeyWithAuth();
     if (masterKey == null) {
-      if (mounted) {
+      if (navigatorContext.mounted) {
         await NotificationService().showError(
-          context: context,
+          context: navigatorContext,
           message: l10n.errorMasterKeyAccess,
         );
       }
@@ -430,9 +444,9 @@ class _NotePageState extends State<NotePage> {
 
     // Проверяем, не пустое ли содержимое
     if (ValidationUtils.isQuillContentEmpty(_currentContent) && _currentImages.isEmpty) {
-      if (mounted) {
+      if (navigatorContext.mounted) {
         await NotificationService().showWarning(
-          context: context,
+          context: navigatorContext,
           message: l10n.errorNoteEmpty,
         );
       }
@@ -441,13 +455,10 @@ class _NotePageState extends State<NotePage> {
 
     final success = await noteController.saveNoteWithImages(masterKey);
     
-    print('NotePage: Результат шифрования: $success');
-    print('NotePage: QR код: ${noteController.qrCodeData}');
-    print('NotePage: Текущая заметка: ${noteController.currentNote?.id}');
     
-    if (success && mounted) {
+    if (success && navigatorContext.mounted) {
       await NotificationService().showSuccess(
-        context: context,
+        context: navigatorContext,
         message: l10n.noteEncrypted,
       );
       
@@ -458,13 +469,14 @@ class _NotePageState extends State<NotePage> {
 
   Future<void> _saveNote(NoteController noteController, MasterKeyController masterKeyController) async {
     final l10n = AppLocalizations.of(context);
+    final navigatorContext = context;
     
     // Получаем мастер-ключ с аутентификацией
     final masterKey = await masterKeyController.getMasterKeyWithAuth();
     if (masterKey == null) {
-      if (mounted) {
+      if (navigatorContext.mounted) {
         await NotificationService().showError(
-          context: context,
+          context: navigatorContext,
           message: l10n.errorMasterKeyAccess,
         );
       }
@@ -473,9 +485,9 @@ class _NotePageState extends State<NotePage> {
 
     // Проверяем, не пустое ли содержимое
     if (ValidationUtils.isQuillContentEmpty(_currentContent) && _currentImages.isEmpty) {
-      if (mounted) {
+      if (navigatorContext.mounted) {
         await NotificationService().showWarning(
-          context: context,
+          context: navigatorContext,
           message: l10n.errorNoteEmpty,
         );
       }
@@ -484,18 +496,55 @@ class _NotePageState extends State<NotePage> {
 
     final success = await noteController.saveNoteWithImages(masterKey);
     
-    print('NotePage: Результат сохранения: $success');
-    print('NotePage: QR код: ${noteController.qrCodeData}');
-    print('NotePage: Текущая заметка: ${noteController.currentNote?.id}');
     
-    if (success && mounted) {
+    if (success && navigatorContext.mounted) {
       await NotificationService().showSuccess(
-        context: context,
+        context: navigatorContext,
         message: l10n.noteSaved,
       );
       
       // Принудительно обновляем UI
       setState(() {});
+    }
+  }
+
+  Future<void> _deleteNote(NoteController noteController, MasterKeyController masterKeyController) async {
+    final l10n = AppLocalizations.of(context);
+    final navigatorContext = context;
+    
+    // Запрашиваем биометрическую аутентификацию
+    final isAuthenticated = await BiometricService.authenticate(
+      reason: l10n.deleteNoteAuthenticationReason,
+    );
+
+    if (!isAuthenticated) {
+      if (navigatorContext.mounted) {
+        await NotificationService().showError(
+          context: navigatorContext,
+          message: l10n.deleteNoteAuthenticationError,
+        );
+      }
+      return;
+    }
+
+    // Удаляем заметку
+    final success = await noteController.deleteCurrentNote();
+    
+    if (success && navigatorContext.mounted) {
+      await NotificationService().showWarning(
+        context: navigatorContext,
+        message: l10n.deleteNoteSuccessMessage,
+      );
+      
+      // Возвращаемся на главную страницу
+      if (navigatorContext.mounted) {
+        Navigator.of(navigatorContext).popUntil((route) => route.isFirst);
+      }
+    } else if (navigatorContext.mounted) {
+      await NotificationService().showError(
+        context: navigatorContext,
+        message: l10n.deleteNoteError,
+      );
     }
   }
 } 

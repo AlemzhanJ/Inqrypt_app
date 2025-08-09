@@ -15,6 +15,18 @@ class NoteRepositoryImpl implements NoteRepository {
   }
 
   @override
+  Future<Note?> getLastNote() async {
+    final notes = await _storage.getAllNotes();
+    if (notes.isEmpty) {
+      return null;
+    }
+    
+    // Сортируем по порядковому номеру и берем самую новую
+    notes.sort((a, b) => b.sequence.compareTo(a.sequence));
+    return notes.first;
+  }
+
+  @override
   Future<Note?> getNoteById(String id) async {
     final notes = await _storage.getAllNotes();
     try {
@@ -28,36 +40,22 @@ class NoteRepositoryImpl implements NoteRepository {
 
   @override
   Future<(Note, String)> createNote(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []}) async {
-    print('NoteRepositoryImpl: createNote - начало');
-    print('NoteRepositoryImpl: Контент: $content');
-    print('NoteRepositoryImpl: Изображений: ${images.length}');
     
     try {
       final result = await _storage.createNote(content, masterKey, images: images);
-      print('NoteRepositoryImpl: Заметка создана успешно');
-      print('NoteRepositoryImpl: ID: ${result.$1.id}');
-      print('NoteRepositoryImpl: Зашифрованный ключ: ${result.$2}');
       return result;
     } catch (e) {
-      print('NoteRepositoryImpl: Ошибка создания заметки: $e');
       rethrow;
     }
   }
 
   @override
   Future<(Note, String)> updateNote(Note note, String masterKey, {String? existingNoteKey}) async {
-    print('NoteRepositoryImpl: updateNote - начало');
-    print('NoteRepositoryImpl: ID заметки: ${note.id}');
-    print('NoteRepositoryImpl: Контент: ${note.content}');
-    print('NoteRepositoryImpl: Изображений: ${note.images.length}');
-    print('NoteRepositoryImpl: Используем существующий ключ: ${existingNoteKey != null}');
     
     try {
       final result = await _storage.updateNote(note, masterKey, existingNoteKey: existingNoteKey);
-      print('NoteRepositoryImpl: Заметка обновлена успешно');
       return result;
     } catch (e) {
-      print('NoteRepositoryImpl: Ошибка обновления заметки: $e');
       rethrow;
     }
   }

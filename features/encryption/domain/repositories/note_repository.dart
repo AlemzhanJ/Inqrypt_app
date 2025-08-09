@@ -6,6 +6,9 @@ abstract class NoteRepository {
   /// Получить все заметки
   Future<List<Note>> getAllNotes();
   
+  /// Получить последнюю заметку (самую новую по дате создания)
+  Future<Note?> getLastNote();
+  
   /// Получить заметку по ID
   Future<Note?> getNoteById(String id);
   

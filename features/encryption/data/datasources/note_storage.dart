@@ -26,35 +26,48 @@ class NoteStorage {
     return notesDir;
   }
   
+  /// Получить следующий порядковый номер заметки
+  Future<int> _getNextSequence() async {
+    final notesDir = await _getNotesDirectory();
+    final files = notesDir.listSync().whereType<File>();
+    int maxSeq = 0;
+    for (final file in files) {
+      try {
+        final noteJson = await file.readAsString();
+        final noteMap = jsonDecode(noteJson) as Map<String, dynamic>;
+        final seq = (noteMap['sequence'] as int?) ?? 0;
+        if (seq > maxSeq) maxSeq = seq;
+      } catch (_) {
+        // Игнорируем поврежденные/несовместимые файлы
+        continue;
+      }
+    }
+    return maxSeq + 1;
+  }
+  
   /// Создать новую заметку
   Future<(Note, String)> createNote(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []}) async {
-    print('NoteStorage: Создаем новую заметку...');
     
     // Генерируем уникальный ключ для заметки
     final noteKey = _generateNoteKey();
-    print('NoteStorage: Сгенерирован ключ заметки');
     
     // Конвертируем JSON Delta в строку для шифрования
     final contentString = jsonEncode(content);
     
     // Добавляем сигнатуру для проверки расшифровки
     final contentWithSignature = '$_magicSignature$contentString';
-    print('NoteStorage: Добавлена сигнатура к содержимому');
     
     // Шифруем содержимое заметки ключом заметки
     final encryptedContent = _encryptContent(contentWithSignature, noteKey);
-    print('NoteStorage: Содержимое зашифровано');
     
     // Шифруем ключ заметки мастер-ключом
     final encryptedNoteKey = _encryptNoteKey(noteKey, masterKey);
-    print('NoteStorage: Ключ заметки зашифрован мастер-ключом');
     
     // Обрабатываем изображения
     List<NoteImage> processedImages = [];
     Map<String, dynamic> updatedContent = content;
     
     if (images.isNotEmpty) {
-      print('NoteStorage: Обрабатываем ${images.length} изображений...');
       for (final image in images) {
         final tempFile = File(image.imagePath);
         if (await tempFile.exists()) {
@@ -72,27 +85,26 @@ class NoteStorage {
             
             // Удаляем временный файл
             await tempFile.delete();
-            print('NoteStorage: 🗑️ Удален временный файл изображения: ${tempFile.path}');
           }
         }
       }
-      print('NoteStorage: Обработано ${processedImages.length} изображений');
     }
+    
+    // Вычисляем порядковый номер
+    final nextSequence = await _getNextSequence();
     
     // Создаем заметку
     final note = Note(
       id: _generateId(),
       content: updatedContent,
-      createdAt: DateTime.now(),
+      sequence: nextSequence,
       encryptedContent: encryptedContent,
       images: processedImages,
     );
     
-    print('NoteStorage: Заметка создана с ID: ${note.id}');
     
     // Сохраняем заметку
     await _saveNote(note);
-    print('NoteStorage: Заметка сохранена в файл');
     
     return (note, encryptedNoteKey);
   }
@@ -118,10 +130,7 @@ class NoteStorage {
         notes.add(Note(
           id: noteMap['id'],
           content: {}, // Пустой контент - содержимое загружается только при расшифровке
-          createdAt: DateTime.parse(noteMap['createdAt']),
-          modifiedAt: noteMap['modifiedAt'] != null 
-            ? DateTime.parse(noteMap['modifiedAt']) 
-            : null,
+          sequence: noteMap['sequence'] as int,
           encryptedContent: noteMap['encryptedContent'],
           images: images,
         ));
@@ -136,50 +145,38 @@ class NoteStorage {
   
   /// Найти заметку по зашифрованному ключу
   Future<(Note?, String?)> findNoteByEncryptedKey(String encryptedNoteKey, String masterKey) async {
-    print('NoteStorage: Ищем заметку по зашифрованному ключу...');
     
     // Сначала расшифровываем ключ из QR мастер-ключом
-    print('NoteStorage: Расшифровываем ключ из QR...');
     final decryptedNoteKey = _decryptNoteKey(encryptedNoteKey, masterKey);
     if (decryptedNoteKey == null) {
-      print('NoteStorage: Не удалось расшифровать ключ из QR');
       return (null, null);
     }
-    print('NoteStorage: Ключ из QR расшифрован');
     
     final notes = await getAllNotes();
-    print('NoteStorage: Найдено заметок: ${notes.length}');
     
     for (final note in notes) {
       try {
-        print('NoteStorage: Проверяем заметку ${note.id}...');
         
         // Расшифровываем содержимое заметки ключом из QR
         final decryptedContent = _decryptContent(note.encryptedContent, decryptedNoteKey);
         if (decryptedContent == null) {
-          print('NoteStorage: Не удалось расшифровать содержимое заметки');
           continue;
         }
         
-        print('NoteStorage: Содержимое заметки расшифровано');
         
         // Проверяем сигнатуру
         if (decryptedContent.startsWith(_magicSignature)) {
-          print('NoteStorage: Сигнатура найдена! Заметка найдена!');
           final contentString = decryptedContent.substring(_magicSignature.length);
           final content = jsonDecode(contentString) as Map<String, dynamic>;
           return (note.copyWith(content: content), decryptedNoteKey);
         } else {
-          print('NoteStorage: Сигнатура не найдена');
         }
       } catch (e) {
-        print('NoteStorage: Ошибка при проверке заметки: $e');
         // Продолжаем поиск
         continue;
       }
     }
     
-    print('NoteStorage: Заметка не найдена');
     return (null, null);
   }
   
@@ -215,7 +212,6 @@ class NoteStorage {
           
           if (image.isEncrypted) {
             // Изображение уже зашифровано - нужно расшифровать и перешифровать
-            print('NoteStorage: Перешифровываем зашифрованное изображение: ${image.id}');
             
             // Расшифровываем изображение со старым ключом
             final decryptedBytes = await _imageService.decryptImage(image.imagePath, existingNoteKey ?? noteKey);
@@ -231,11 +227,9 @@ class NoteStorage {
               // Удаляем временный файл
               await tempFile.delete();
             } else {
-              print('NoteStorage: Не удалось расшифровать изображение: ${image.id}');
             }
           } else {
             // Изображение не зашифровано - шифруем как обычно
-            print('NoteStorage: Шифруем незашифрованное изображение: ${image.id}');
             newEncryptedPath = await _imageService.encryptImage(imageFile, noteKey);
           }
           
@@ -250,12 +244,10 @@ class NoteStorage {
               oldImagePaths.add(image.imagePath);
             }
           } else {
-            print('NoteStorage: Не удалось обработать изображение: ${image.id}');
             // Добавляем изображение без изменений, если не удалось перешифровать
             processedImages.add(image);
           }
         } else {
-          print('NoteStorage: Файл изображения не найден: ${image.imagePath}');
           // Добавляем изображение без изменений, если файл не найден
           processedImages.add(image);
         }
@@ -266,7 +258,7 @@ class NoteStorage {
     final updatedNote = note.copyWith(
       content: updatedContent,
       encryptedContent: encryptedContent,
-      modifiedAt: DateTime.now(),
+      // Не обновляем modifiedAt: по требованиям безопасности/приватности время редактирования не хранится
       images: processedImages,
     );
     
@@ -279,10 +271,10 @@ class NoteStorage {
         final oldFile = File(oldPath);
         if (await oldFile.exists()) {
           await oldFile.delete();
-          print('NoteStorage: 🗑️ Удален старый файл изображения: $oldPath');
         }
       } catch (e) {
-        print('NoteStorage: ❌ Ошибка удаления старого файла $oldPath: $e');
+        // Игнорируем ошибки при удалении старых изображений
+        // Это не критично для работы приложения
       }
     }
     
@@ -310,8 +302,8 @@ class NoteStorage {
     final noteJson = jsonEncode({
       'id': note.id,
       // 'content': note.content, // УДАЛЕНО: содержимое не должно храниться в открытом виде
-      'createdAt': note.createdAt.toIso8601String(),
-      'modifiedAt': note.modifiedAt?.toIso8601String(),
+      'sequence': note.sequence,
+      // Не храним 'modifiedAt' умышленно: время редактирования не должно сохраняться
       'encryptedContent': note.encryptedContent,
       'images': imagesJson,
     });

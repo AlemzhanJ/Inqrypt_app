@@ -189,6 +189,7 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.surface,
         contentTextStyle: AppTextStyles.bodyMedium,
+        elevation: 0, // Убираем тени
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),

@@ -19,6 +19,7 @@ class QuillNoteEditor extends StatefulWidget {
   final bool isExistingNote; // Новая заметка или найденная существующая
   final VoidCallback? onEncryptPressed; // Callback для кнопки шифрования (новая заметка)
   final VoidCallback? onSavePressed; // Callback для кнопки сохранения (существующая заметка)
+  final VoidCallback? onDeletePressed; // Callback для кнопки удаления (найденная заметка)
   final Function(bool isEditing)? onEditModeChanged; // Callback для изменения режима редактирования
   final VoidCallback? onNoteSaved; // Callback для уведомления о сохранении заметки
   final String? noteKey; // Ключ заметки для расшифровки изображений
@@ -33,6 +34,7 @@ class QuillNoteEditor extends StatefulWidget {
     this.isExistingNote = false, // По умолчанию новая заметка
     this.onEncryptPressed,
     this.onSavePressed,
+    this.onDeletePressed,
     this.onEditModeChanged,
     this.onNoteSaved,
     this.noteKey, // Ключ заметки для расшифровки изображений
@@ -88,10 +90,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
     _originalImages = List<NoteImage>.from(widget.initialImages);
     _hasChanges = false; // При инициализации изменений нет
     
-    print('QuillEditor: Инициализация завершена');
-    print('QuillEditor: Исходный контент сохранен: $_originalContent');
-    print('QuillEditor: Исходных изображений: ${_originalImages.length}');
-    print('QuillEditor: _hasChanges установлен в: $_hasChanges');
     
     _controller.addListener(_onContentChanged);
     _loadInitialImages();
@@ -127,25 +125,16 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
     
     // Отладочная информация
     if (contentChanged) {
-      print('QuillEditor: Обнаружены изменения в контенте');
-      print('QuillEditor: Оригинальный контент: $_originalContent');
-      print('QuillEditor: Текущий контент: $currentContent');
       
       // Подробное сравнение каждого элемента
       for (int i = 0; i < _originalContent.length && i < currentContent.length; i++) {
         final orig = _originalContent[i];
         final curr = currentContent[i];
         if (orig != curr) {
-          print('QuillEditor: Различие в элементе $i:');
-          print('QuillEditor:   Оригинал: $orig');
-          print('QuillEditor:   Текущий: $curr');
         }
       }
     }
     if (imagesChanged) {
-      print('QuillEditor: Обнаружены изменения в изображениях');
-      print('QuillEditor: Оригинальных изображений: ${_originalImages.length}');
-      print('QuillEditor: Текущих изображений: ${_images.length}');
     }
     
     return contentChanged || imagesChanged;
@@ -218,7 +207,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
       _originalContent = List<dynamic>.from(_controller.document.toDelta().toJson());
       _originalImages = List<NoteImage>.from(_images);
     });
-    print('QuillEditor: Флаг изменений сброшен');
   }
 
   /// Загрузить начальные изображения
@@ -227,28 +215,23 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
       try {
         if (image.isEncrypted && widget.noteKey != null) {
           // Зашифрованное изображение - расшифровываем
-          print('QuillEditor: Загружаем зашифрованное изображение: ${image.id}');
           final imageBytes = await _imageService.decryptImage(image.imagePath, widget.noteKey!);
           if (imageBytes != null) {
             _imageCache[image.id] = imageBytes;
-            print('QuillEditor: ✅ Зашифрованное изображение расшифровано: ${image.id}');
           } else {
-            print('QuillEditor: ❌ Не удалось расшифровать изображение: ${image.id}');
           }
         } else {
           // Незашифрованное изображение - читаем напрямую
-          print('QuillEditor: Загружаем незашифрованное изображение: ${image.id}');
           final imageFile = File(image.imagePath);
           if (await imageFile.exists()) {
             final imageBytes = await imageFile.readAsBytes();
             _imageCache[image.id] = imageBytes;
-            print('QuillEditor: ✅ Незашифрованное изображение загружено: ${image.id}');
           } else {
-            print('QuillEditor: ❌ Файл изображения не найден: ${image.imagePath}');
           }
         }
       } catch (e) {
-        print('QuillEditor: Ошибка загрузки изображения ${image.id}: $e');
+        // Игнорируем ошибки при загрузке изображений из кэша
+        // Это не критично для работы редактора
       }
     }
     if (mounted) {
@@ -278,7 +261,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
       setState(() {
         _hasChanges = hasChanges;
       });
-      print('QuillEditor: Изменения контента: $_hasChanges');
     }
     
     widget.onChanged(content, _images);
@@ -310,7 +292,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
         imagesToRemove.add(image);
         // Удаляем из кэша
         _imageCache.remove(image.id);
-        print('QuillEditor: 🗑️ Изображение удалено из документа: ${image.id}');
       }
     }
     
@@ -318,7 +299,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
       setState(() {
         _images.removeWhere((image) => imagesToRemove.contains(image));
       });
-      print('QuillEditor: 📊 Обновлен список изображений. Осталось: ${_images.length}');
     }
   }
 
@@ -530,10 +510,10 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
         final fileExistsBefore = await file.exists();
         if (fileExistsBefore) {
           await file.delete();
-          print('QuillEditor: ✅ Оригинальный файл камеры успешно удален: ${file.path}');
         }
       } catch (e) {
-        print('QuillEditor: ❌ Ошибка удаления оригинального файла: $e');
+        // Игнорируем ошибки при удалении оригинального файла
+        // Это не критично для работы приложения
       }
     }
 
@@ -582,23 +562,16 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
   /// Переключить режим редактирования
   @override
   void toggleEditMode() {
-    print('QuillNoteEditor: toggleEditMode вызван');
-    print('QuillNoteEditor: текущий _isEditing = $_isEditing');
-    print('QuillNoteEditor: widget.isReadOnly = ${widget.isReadOnly}');
-    print('QuillNoteEditor: _controller.readOnly до изменения = ${_controller.readOnly}');
     
     setState(() {
       _isEditing = !_isEditing;
     });
     
-    print('QuillNoteEditor: новый _isEditing = $_isEditing');
-    print('QuillNoteEditor: _controller.readOnly после изменения = ${_controller.readOnly}');
     
     // Вибрация при переключении режима
     VibrationService().navigationForwardVibration();
     widget.onEditModeChanged?.call(_isEditing);
     
-    print('QuillNoteEditor: onEditModeChanged вызван с _isEditing = $_isEditing');
   }
 
   /// Обработать вставку текста с применением стилей окружающего текста
@@ -607,26 +580,21 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
       // Получаем данные из буфера обмена
       final ClipboardData? clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
       if (clipboardData?.text == null || clipboardData!.text!.isEmpty) {
-        print('QuillNoteEditor: буфер обмена пуст или содержит не текстовые данные');
         return;
       }
 
       final String textToPaste = clipboardData.text!;
-      print('QuillNoteEditor: получен текст для вставки: "$textToPaste"');
 
       // Получаем текущую позицию курсора
       final TextSelection selection = _controller.selection;
       final int insertPosition = selection.baseOffset;
       
-      print('QuillNoteEditor: позиция вставки: $insertPosition');
 
       // Получаем стили окружающего текста в позиции вставки
       final Style surroundingStyle = _getSurroundingStyle(insertPosition);
-      print('QuillNoteEditor: стили окружающего текста: $surroundingStyle');
 
       // Очищаем текст от лишних символов новой строки в начале и конце
       final String cleanedText = _cleanTextForPaste(textToPaste);
-      print('QuillNoteEditor: очищенный текст: "$cleanedText"');
 
       // Вставляем текст с применением стилей окружающего текста
       _insertTextWithStyle(cleanedText, insertPosition, surroundingStyle);
@@ -635,7 +603,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
       VibrationService().successVibration();
 
     } catch (e) {
-      print('QuillNoteEditor: ошибка при обработке вставки: $e');
       // Вибрация при ошибке
       VibrationService().errorVibration();
     }
@@ -664,7 +631,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
         if (safePosition > 0) {
           final Style prevStyle = document.collectStyle(safePosition - 1, 1);
           if (prevStyle.isNotEmpty) {
-            print('QuillNoteEditor: найдены стили в предыдущей позиции: $prevStyle');
             return prevStyle;
           }
         }
@@ -673,21 +639,17 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
         if (safePosition < document.length - 1) {
           final Style nextStyle = document.collectStyle(safePosition + 1, 1);
           if (nextStyle.isNotEmpty) {
-            print('QuillNoteEditor: найдены стили в следующей позиции: $nextStyle');
             return nextStyle;
           }
         }
         
         // Если стили не найдены, возвращаем пустой стиль
-        print('QuillNoteEditor: стили не найдены, используем пустой стиль');
         return Style();
       }
 
-      print('QuillNoteEditor: найдены стили в позиции: $styleAtPosition');
       return styleAtPosition;
       
     } catch (e) {
-      print('QuillNoteEditor: ошибка при получении стилей: $e');
       return Style();
     }
   }
@@ -711,7 +673,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
     try {
       // Если текст пустой, ничего не вставляем
       if (text.isEmpty) {
-        print('QuillNoteEditor: текст для вставки пустой');
         return;
       }
 
@@ -730,7 +691,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
         style.attributes.forEach((key, attribute) {
           _controller.formatText(position, text.length, attribute);
         });
-        print('QuillNoteEditor: применены стили к вставленному тексту: $style');
       }
 
       // Устанавливаем курсор после вставленного текста
@@ -740,10 +700,10 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
         ChangeSource.remote,
       );
 
-      print('QuillNoteEditor: текст успешно вставлен с позиции $position до $newPosition');
       
     } catch (e) {
-      print('QuillNoteEditor: ошибка при вставке текста: $e');
+      // Игнорируем ошибки при вставке текста со стилями
+      // Это не критично для работы редактора
     }
   }
 
@@ -788,22 +748,18 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
       // Получаем данные из буфера обмена
       final ClipboardData? clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
       if (clipboardData?.text == null || clipboardData!.text!.isEmpty) {
-        print('QuillNoteEditor: буфер обмена пуст или содержит не текстовые данные');
         return;
       }
 
       final String textToPaste = clipboardData.text!;
-      print('QuillNoteEditor: получен текст для вставки как обычный текст: "$textToPaste"');
 
       // Получаем текущую позицию курсора
       final TextSelection selection = _controller.selection;
       final int insertPosition = selection.baseOffset;
       
-      print('QuillNoteEditor: позиция вставки: $insertPosition');
 
       // Очищаем текст от лишних символов
       final String cleanedText = _cleanTextForPaste(textToPaste);
-      print('QuillNoteEditor: очищенный текст: "$cleanedText"');
 
       // Вставляем текст без применения стилей
       _insertTextWithStyle(cleanedText, insertPosition, Style());
@@ -812,7 +768,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
       VibrationService().successVibration();
 
     } catch (e) {
-      print('QuillNoteEditor: ошибка при обработке вставки обычного текста: $e');
       // Вибрация при ошибке
       VibrationService().errorVibration();
     }
@@ -820,14 +775,9 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
 
   @override
   Widget build(BuildContext context) {
-    print('QuillNoteEditor: build вызван');
-    print('QuillNoteEditor: _isEditing = $_isEditing');
-    print('QuillNoteEditor: widget.isReadOnly = ${widget.isReadOnly}');
-    print('QuillNoteEditor: autoFocus = ${_isEditing && !widget.isReadOnly}');
     
     // Управляем режимом только для чтения через контроллер
     _controller.readOnly = !_isEditing || widget.isReadOnly;
-    print('QuillNoteEditor: _controller.readOnly = ${_controller.readOnly}');
     
     return Stack(
       children: [
@@ -846,7 +796,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
                                                event.logicalKey == LogicalKeyboardKey.keyV;
                     
                     if (isPasteCommand) {
-                      print('QuillNoteEditor: обнаружена команда вставки');
                       // Перехватываем стандартную вставку и используем нашу кастомную
                       _handlePasteWithSurroundingStyles();
                     }
@@ -854,23 +803,16 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
                 },
                 child: GestureDetector(
                   onTap: () {
-                    print('QuillNoteEditor: GestureDetector onTap вызван');
-                    print('QuillNoteEditor: _isEditing = $_isEditing');
-                    print('QuillNoteEditor: widget.isReadOnly = ${widget.isReadOnly}');
-                    print('QuillNoteEditor: _controller.readOnly = ${_controller.readOnly}');
                     
                     // При клике по тексту в режиме просмотра переключаем в режим редактирования
                     if (!_isEditing && !widget.isReadOnly) {
-                      print('QuillNoteEditor: переключаем в режим редактирования через GestureDetector');
                       toggleEditMode();
                     } else {
-                      print('QuillNoteEditor: клик проигнорирован (уже в режиме редактирования или только для чтения)');
                     }
                   },
                   onLongPress: () {
                     // Обработчик длительного нажатия для мобильных устройств
                     if (_isEditing && !widget.isReadOnly) {
-                      print('QuillNoteEditor: длительное нажатие в режиме редактирования');
                       _showCustomPasteMenu();
                     }
                   },
@@ -887,7 +829,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
                           noteKey: widget.noteKey,
                           onImageTap: (imageId) {
                             // Переход в галерею изображений
-                            print('QuillNoteEditor: клик по изображению $imageId');
                             _showImageGallery(imageId);
                           },
                         ),
@@ -905,30 +846,22 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
                         ),
                       ),
                       onTapDown: (details, p1) {
-                        print('QuillNoteEditor: onTapDown вызван');
-                        print('QuillNoteEditor: _isEditing = $_isEditing');
-                        print('QuillNoteEditor: widget.isReadOnly = ${widget.isReadOnly}');
-                        print('QuillNoteEditor: _controller.readOnly = ${_controller.readOnly}');
                         
                         // Если мы в режиме редактирования, разрешаем все клики
                         if (_isEditing && !widget.isReadOnly) {
-                          print('QuillNoteEditor: разрешаем обычный клик в режиме редактирования');
                           return false; // Разрешаем дальнейшую обработку для навигации по тексту и кликов по изображениям
                         }
                         
                         // Если мы в режиме просмотра, переключаем в режим редактирования
                         if (!_isEditing && !widget.isReadOnly) {
-                          print('QuillNoteEditor: переключаем в режим редактирования');
                           
                           // Сохраняем позицию клика для установки курсора
                           final tapOffset = p1(details.globalPosition).offset;
-                          print('QuillNoteEditor: позиция клика = $tapOffset');
                           
                           // Находим ближайшую валидную позицию для курсора
                           final documentLength = _controller.document.length;
                           final targetOffset = _findNearestValidPosition(tapOffset, documentLength);
                           
-                          print('QuillNoteEditor: устанавливаем курсор в позицию $targetOffset');
                           _controller.updateSelection(
                             TextSelection.collapsed(offset: targetOffset),
                             ChangeSource.remote,
@@ -948,7 +881,6 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
                         }
                         
                         // В остальных случаях (только для чтения) игнорируем
-                        print('QuillNoteEditor: клик проигнорирован (только для чтения)');
                         return false;
                       },
                     ),
@@ -971,6 +903,14 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
             child: widget.isExistingNote 
                 ? (_hasChanges ? _buildSaveButton() : const SizedBox.shrink())
                 : _buildEncryptButton(),
+          ),
+          
+        // Кнопка удаления слева снизу (только для найденных заметок в режиме просмотра)
+        if (!_isEditing && widget.isExistingNote && widget.onDeletePressed != null)
+          Positioned(
+            bottom: 40,
+            left: 40,
+            child: _buildDeleteButton(),
           ),
       ],
     );
@@ -1070,6 +1010,57 @@ class _QuillNoteEditorState extends QuillNoteEditorState {
                   AppLocalizations.of(context).saveButtonText,
                   style: TextStyle(
                     color: isDark ? Colors.black : Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16, // Увеличил размер текста (было 14)
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Построить кнопку удаления (только для найденных заметок)
+  Widget _buildDeleteButton() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.red : Colors.redAccent,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: isDark ? null : [
+          BoxShadow(
+            color: Colors.red.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            VibrationService().errorVibration();
+            widget.onDeletePressed?.call();
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Увеличил padding (было 16, 12)
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.delete_forever,
+                  color: isDark ? Colors.white : Colors.white,
+                  size: 24, // Увеличил размер иконки (было 20)
+                ),
+                const SizedBox(width: 10), // Увеличил отступ (было 8)
+                Text(
+                  AppLocalizations.of(context).deleteNoteButtonText,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.white,
                     fontWeight: FontWeight.w600,
                     fontSize: 16, // Увеличил размер текста (было 14)
                   ),
@@ -1214,22 +1205,18 @@ class ImageEmbedBuilder extends EmbedBuilder {
     
     if (isEncrypted && noteKey != null) {
       // Зашифрованное изображение - расшифровываем
-      print('ImageEmbedBuilder: Расшифровываем изображение: $imagePath');
       final imageService = ImageService();
       final decryptedBytes = await imageService.decryptImage(imagePath, noteKey!);
       if (decryptedBytes != null) {
-        print('ImageEmbedBuilder: ✅ Изображение расшифровано');
         return decryptedBytes;
       } else {
         throw Exception('Не удалось расшифровать изображение');
       }
     } else {
       // Незашифрованное изображение - читаем напрямую
-      print('ImageEmbedBuilder: Читаем незашифрованное изображение: $imagePath');
       final imageFile = File(imagePath);
       if (await imageFile.exists()) {
         final bytes = await imageFile.readAsBytes();
-        print('ImageEmbedBuilder: ✅ Изображение загружено');
         return bytes;
       } else {
         throw Exception('Файл изображения не найден');

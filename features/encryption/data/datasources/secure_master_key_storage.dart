@@ -67,20 +67,15 @@ class SecureMasterKeyStorage {
   /// Расшифровать мастер-ключ с помощью биометрии
   Future<String?> decryptMasterKey() async {
     try {
-      print('decryptMasterKey: Начинаем расшифровку...');
       final masterKey = await getMasterKey();
       if (masterKey == null) {
-        print('decryptMasterKey: Мастер-ключ не найден');
         return null;
       }
       
-      print('decryptMasterKey: Мастер-ключ найден, расшифровываем...');
       // Расшифровываем мастер-ключ (биометрия уже была проверена в контроллере)
       final result = await _decryptWithBiometric(masterKey.encryptedKey);
-      print('decryptMasterKey: Результат расшифровки: ${result != null}');
       return result;
     } catch (e) {
-      print('decryptMasterKey: Ошибка: $e');
       return null;
     }
   }
@@ -112,10 +107,8 @@ class SecureMasterKeyStorage {
   
   /// Шифровать с помощью биометрии
   Future<String> _encryptWithBiometric(String data) async {
-    print('_encryptWithBiometric: Начинаем шифрование...');
     // Используем хеш биометрических данных как ключ
     final biometricHash = await _getBiometricHash();
-    print('_encryptWithBiometric: Хеш биометрии: ${biometricHash.substring(0, 8)}...');
     final key = Key.fromUtf8(biometricHash);
     final iv = IV.fromLength(16);
     final encrypter = Encrypter(AES(key));
@@ -123,16 +116,13 @@ class SecureMasterKeyStorage {
     final encrypted = encrypter.encrypt(data, iv: iv);
     // Сохраняем IV вместе с зашифрованными данными: base64(iv) + ":" + base64(data)
     final result = '${base64Encode(iv.bytes)}:${encrypted.base64}';
-    print('_encryptWithBiometric: Шифрование завершено');
     return result;
   }
   
   /// Расшифровать с помощью биометрии
   Future<String?> _decryptWithBiometric(String encryptedData) async {
     try {
-      print('_decryptWithBiometric: Начинаем расшифровку...');
       final biometricHash = await _getBiometricHash();
-      print('_decryptWithBiometric: Хеш биометрии: ${biometricHash.substring(0, 8)}...');
       final key = Key.fromUtf8(biometricHash);
       final encrypter = Encrypter(AES(key));
       
@@ -141,7 +131,6 @@ class SecureMasterKeyStorage {
         // Новый формат: base64(iv):base64(data)
         final parts = encryptedData.split(':');
         if (parts.length != 2) {
-          print('_decryptWithBiometric: Неверный формат данных');
           return null;
         }
         
@@ -152,36 +141,29 @@ class SecureMasterKeyStorage {
         final encrypted = Encrypted(encryptedBytes);
         
         final result = encrypter.decrypt(encrypted, iv: iv);
-        print('_decryptWithBiometric: Расшифровка завершена (новый формат)');
         return result;
       } else {
         // Старый формат: только base64(data) - не поддерживается
-        print('_decryptWithBiometric: Старый формат данных не поддерживается');
         return null;
       }
     } catch (e) {
-      print('_decryptWithBiometric: Ошибка расшифровки: $e');
       return null;
     }
   }
   
   /// Получить хеш биометрических данных
   Future<String> _getBiometricHash() async {
-    print('_getBiometricHash: Получаем биометрические данные...');
     
     // Проверяем только наличие биометрии, а не конкретные типы
-    final isAvailable = await BiometricService.isBiometricAvailable();
-    print('_getBiometricHash: Биометрия доступна: $isAvailable');
+    await BiometricService.isBiometricAvailable();
     
     // Используем стабильный идентификатор
     const biometricString = 'biometric_available';
-    print('_getBiometricHash: Строка биометрии: $biometricString');
     
     // Добавляем соль для безопасности
     const salt = 'inqrypt_biometric_salt_2024';
     final hash = sha256.convert(utf8.encode(biometricString + salt));
     final result = hash.toString().substring(0, 32); // 32 символа для AES-256
-    print('_getBiometricHash: Хеш: ${result.substring(0, 8)}...');
     
     return result;
   }

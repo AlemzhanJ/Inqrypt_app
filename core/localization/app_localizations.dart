@@ -71,6 +71,20 @@ class AppLocalizations {
   String get deleteAllNotesTitle => throw UnimplementedError();
   String get deleteAllNotesSubtitle => throw UnimplementedError();
   
+  // Удаление последней заметки
+  String get deleteLastNoteTitle => throw UnimplementedError();
+  String get deleteLastNoteSubtitle => throw UnimplementedError();
+  String get deleteLastNoteActionTitle => throw UnimplementedError();
+  String get deleteLastNoteDialogTitle => throw UnimplementedError();
+  String get deleteLastNoteDialogContent => throw UnimplementedError();
+  String get deleteLastNoteDialogCancelButton => throw UnimplementedError();
+  String get deleteLastNoteDialogConfirmButton => throw UnimplementedError();
+  String get deleteLastNoteAuthenticationReason => throw UnimplementedError();
+  String get deleteLastNoteAuthenticationError => throw UnimplementedError();
+  String get deleteLastNoteNoNotesMessage => throw UnimplementedError();
+  String get deleteLastNoteSuccessMessage => throw UnimplementedError();
+  String get deleteLastNoteError => throw UnimplementedError();
+  
   // Главная страница - дополнительные элементы
   String get securityStatusTitle => throw UnimplementedError();
   String get securityStatusDescription => throw UnimplementedError();
@@ -139,6 +153,15 @@ class AppLocalizations {
   String get confirmSaveNoteContent => throw UnimplementedError();
   String get confirmDeleteAllNotes => throw UnimplementedError();
   String get confirmDeleteNote => throw UnimplementedError();
+  String get deleteNoteDialogTitle => throw UnimplementedError();
+  String get deleteNoteDialogContent => throw UnimplementedError();
+  String get deleteNoteDialogCancelButton => throw UnimplementedError();
+  String get deleteNoteDialogConfirmButton => throw UnimplementedError();
+  String get deleteNoteAuthenticationReason => throw UnimplementedError();
+  String get deleteNoteAuthenticationError => throw UnimplementedError();
+  String get deleteNoteSuccessMessage => throw UnimplementedError();
+  String get deleteNoteError => throw UnimplementedError();
+  String get deleteNoteButtonText => throw UnimplementedError();
   String get confirmDeleteImage => throw UnimplementedError();
   String get confirmDeleteImageContent => throw UnimplementedError();
   
@@ -294,4 +317,21 @@ class AppLocalizations {
   String get pasteWithStylesDescription => throw UnimplementedError();
   String get pasteAsPlainText => throw UnimplementedError();
   String get pasteAsPlainTextDescription => throw UnimplementedError();
+  
+  // Support Us
+  String get supportUsTitle => throw UnimplementedError();
+  String get supportUsDescription => throw UnimplementedError();
+  String get supportUsButtonText => throw UnimplementedError();
+  String get supporterBadgeText => throw UnimplementedError();
+  String get supporterThankYouMessage => throw UnimplementedError();
+  String get purchaseSuccessMessage => throw UnimplementedError();
+  String get purchaseErrorMessage => throw UnimplementedError();
+  String get purchaseNotAvailableMessage => throw UnimplementedError();
+  
+  // In‑App Purchase — восстановление покупок
+  String get restorePurchasesButtonText => throw UnimplementedError();
+  
+  // In‑App Purchase — служебные строки
+  String get processingText => throw UnimplementedError();
+  String get purchasesRestoredMessage => throw UnimplementedError();
 } 

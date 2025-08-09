@@ -43,13 +43,11 @@ class BiometricService {
       // Проверяем доступность биометрии перед аутентификацией
       final isAvailable = await isBiometricAvailable();
       if (!isAvailable) {
-        print('Биометрия недоступна');
         return false;
       }
 
       // Получаем доступные типы биометрии
-      final biometrics = await getAvailableBiometrics();
-      print('Доступные типы биометрии: $biometrics');
+      await getAvailableBiometrics();
 
       final result = await _localAuth.authenticate(
         localizedReason: authReason,
@@ -59,7 +57,6 @@ class BiometricService {
         ),
       );
       
-      print('Результат биометрической аутентификации: $result');
       
       // Добавляем вибрацию при успешной аутентификации
       if (result) {
@@ -68,11 +65,9 @@ class BiometricService {
       
       return result;
     } catch (e) {
-      print('Ошибка биометрической аутентификации: $e');
       
       // Проверяем, не заблокирована ли биометрия
       if (e.toString().contains('NotAvailable') || e.toString().contains('Authentication failure')) {
-        print('Биометрия заблокирована после неудачных попыток');
         // Можно показать пользователю сообщение о необходимости разблокировки
       }
       

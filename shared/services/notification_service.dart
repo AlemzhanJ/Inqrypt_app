@@ -61,6 +61,7 @@ class NotificationService {
           backgroundColor: backgroundColor,
           duration: duration ?? const Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
+          elevation: 0, // Убираем тени
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),

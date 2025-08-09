@@ -73,19 +73,14 @@ class VibrationService {
   /// Вибрация для навигации назад (возврат на предыдущую страницу)
   /// Короткая вибрация с низкой интенсивностью
   Future<void> navigationBackVibration() async {
-    print('VibrationService: Проверяем поддержку вибрации...');
     final hasVibrator = await this.hasVibrator;
-    print('VibrationService: Устройство поддерживает вибрацию: $hasVibrator');
     
     if (hasVibrator) {
-      print('VibrationService: Запускаем вибрацию назад (50ms, 128 amplitude)');
       await Vibration.vibrate(
         duration: 30, // Увеличено с 30ms до 50ms
         amplitude: 110, // Увеличено с 96 до 128 (50% от максимума)
       );
-      print('VibrationService: Вибрация назад завершена');
     } else {
-      print('VibrationService: Устройство не поддерживает вибрацию');
     }
   }
 

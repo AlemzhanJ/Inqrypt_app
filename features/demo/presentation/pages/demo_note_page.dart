@@ -220,7 +220,7 @@ class _DemoNotePageState extends State<DemoNotePage> {
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed == true && navigatorContext.mounted) {
       _encryptNote();
     }
   }
@@ -228,10 +228,12 @@ class _DemoNotePageState extends State<DemoNotePage> {
   void _encryptNote() async {
     final navigatorContext = context;
     await VibrationService().noteCreatedVibration();
-    await NotificationService().showSuccess(
-      context: navigatorContext,
-      message: AppLocalizations.of(navigatorContext).qrCreatedMessage,
-    );
+    if (navigatorContext.mounted) {
+      await NotificationService().showSuccess(
+        context: navigatorContext,
+        message: AppLocalizations.of(navigatorContext).qrCreatedMessage,
+      );
+    }
     
     setState(() {
       _showQR = true;

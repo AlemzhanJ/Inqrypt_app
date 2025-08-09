@@ -97,6 +97,43 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get deleteAllNotesSubtitle => '';
   
+  // Delete last note
+  @override
+  String get deleteLastNoteTitle => 'Delete Last Note';
+  
+  @override
+  String get deleteLastNoteSubtitle => '';
+  
+  @override
+  String get deleteLastNoteActionTitle => 'Delete Last Note';
+  
+  @override
+  String get deleteLastNoteDialogTitle => 'Delete Last Note?';
+  
+  @override
+  String get deleteLastNoteDialogContent => 'This action will permanently delete the last created note. This action cannot be undone.\n\nContinue?';
+  
+  @override
+  String get deleteLastNoteDialogCancelButton => 'Cancel';
+  
+  @override
+  String get deleteLastNoteDialogConfirmButton => 'Delete';
+  
+  @override
+  String get deleteLastNoteAuthenticationReason => 'Confirm deletion of last note';
+  
+  @override
+  String get deleteLastNoteAuthenticationError => 'Authentication failed';
+  
+  @override
+  String get deleteLastNoteNoNotesMessage => 'No notes to delete';
+  
+  @override
+  String get deleteLastNoteSuccessMessage => 'Last note deleted';
+  
+  @override
+  String get deleteLastNoteError => 'Error deleting last note';
+  
   // Home page - additional elements
   @override
   String get securityStatusTitle => 'Security';
@@ -273,6 +310,33 @@ class AppLocalizationsEn extends AppLocalizations {
   
   @override
   String get confirmDeleteNote => 'Are you sure you want to delete this note?';
+  
+  @override
+  String get deleteNoteDialogTitle => 'Delete Note?';
+  
+  @override
+  String get deleteNoteDialogContent => 'This action will permanently delete this note. This action cannot be undone.\n\nContinue?';
+  
+  @override
+  String get deleteNoteDialogCancelButton => 'Cancel';
+  
+  @override
+  String get deleteNoteDialogConfirmButton => 'Delete';
+  
+  @override
+  String get deleteNoteAuthenticationReason => 'Confirm note deletion';
+  
+  @override
+  String get deleteNoteAuthenticationError => 'Authentication failed';
+  
+  @override
+  String get deleteNoteSuccessMessage => 'Note deleted';
+  
+  @override
+  String get deleteNoteError => 'Error deleting note';
+  
+  @override
+  String get deleteNoteButtonText => 'Delete';
   
   @override
   String get confirmDeleteImage => 'Are you sure you want to delete this image?';
@@ -598,7 +662,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noteFoundMessage => 'Note found!';
   
   @override
-  String get demoModeScanningMessage => 'Demo mode: Simulated scanning';
+  String get demoModeScanningMessage => 'Simulated scanning';
   
   @override
   String get demoModeNoteSavedMessage => 'Demo mode: Note saved';
@@ -635,4 +699,38 @@ class AppLocalizationsEn extends AppLocalizations {
   // Image Gallery
   @override
   String imageGalleryCounter(int current, int total) => '$current of $total';
+  
+  // Support Us
+  @override
+  String get supportUsTitle => 'Support Us';
+  
+  @override
+  String get supportUsDescription => 'This is voluntary support. The purchase unlocks nothing — all features are free. You help the open source project live.';
+  
+  @override
+  String get supportUsButtonText => 'Support Us';
+  
+  @override
+  String get supporterBadgeText => 'Supporter';
+  
+  @override
+  String get supporterThankYouMessage => 'Thank you for supporting Inqrypt!';
+  
+  @override
+  String get purchaseSuccessMessage => 'Thank you for your support!';
+  
+  @override
+  String get purchaseErrorMessage => 'Purchase failed. Please try again.';
+  
+  @override
+  String get purchaseNotAvailableMessage => 'In-app purchases are not available.';
+
+  @override
+  String get restorePurchasesButtonText => 'Restore Purchases';
+
+  @override
+  String get processingText => 'Processing...';
+
+  @override
+  String get purchasesRestoredMessage => 'Purchases restored';
 } 

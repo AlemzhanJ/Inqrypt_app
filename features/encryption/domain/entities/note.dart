@@ -4,7 +4,7 @@ import 'note_image.dart';
 class Note {
   final String id;
   final Map<String, dynamic> content; // JSON Delta формат для Quill
-  final DateTime createdAt;
+  final int sequence; // Порядковый номер заметки (монотонный, заменяет время создания)
   final DateTime? modifiedAt;
   final String encryptedContent;
   final List<NoteImage> images; // Список изображений в заметке
@@ -12,7 +12,7 @@ class Note {
   const Note({
     required this.id,
     required this.content,
-    required this.createdAt,
+    required this.sequence,
     this.modifiedAt,
     required this.encryptedContent,
     this.images = const [], // По умолчанию пустой список
@@ -21,7 +21,7 @@ class Note {
   Note copyWith({
     String? id,
     Map<String, dynamic>? content,
-    DateTime? createdAt,
+    int? sequence,
     DateTime? modifiedAt,
     String? encryptedContent,
     List<NoteImage>? images,
@@ -29,7 +29,7 @@ class Note {
     return Note(
       id: id ?? this.id,
       content: content ?? this.content,
-      createdAt: createdAt ?? this.createdAt,
+      sequence: sequence ?? this.sequence,
       modifiedAt: modifiedAt ?? this.modifiedAt,
       encryptedContent: encryptedContent ?? this.encryptedContent,
       images: images ?? this.images,

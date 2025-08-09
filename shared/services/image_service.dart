@@ -34,7 +34,6 @@ class ImageService {
   /// Выбрать изображение из галереи
   Future<ImageSourceResult?> pickImageFromGallery() async {
     try {
-      print('ImageService: Выбираем изображение из галереи');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1920, // Максимальная ширина
@@ -43,17 +42,15 @@ class ImageService {
       );
       
       if (image != null) {
-        print('ImageService: ✅ Изображение выбрано из галереи: ${image.path}');
         return ImageSourceResult(
           file: File(image.path),
           source: ImageSource.gallery,
           shouldDeleteOriginal: false, // Не удаляем оригинал из галереи
         );
       }
-      print('ImageService: ❌ Изображение из галереи не выбрано');
       return null;
     } catch (e) {
-      debugPrint('Ошибка выбора изображения из галереи: $e');
+      
       return null;
     }
   }
@@ -61,7 +58,6 @@ class ImageService {
   /// Сделать фотографию
   Future<ImageSourceResult?> takePhoto() async {
     try {
-      print('ImageService: Делаем фотографию через камеру');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         maxWidth: 1920,
@@ -73,17 +69,15 @@ class ImageService {
       );
       
       if (image != null) {
-        print('ImageService: ✅ Фотография сделана через камеру: ${image.path}');
         return ImageSourceResult(
           file: File(image.path),
           source: ImageSource.camera,
           shouldDeleteOriginal: true, // Удаляем оригинал после копирования
         );
       }
-      print('ImageService: ❌ Фотография через камеру не сделана');
       return null;
     } catch (e) {
-      debugPrint('Ошибка съемки фотографии: $e');
+      
       return null;
     }
   }
@@ -144,8 +138,6 @@ class ImageService {
     try {
       // Читаем изображение
       final Uint8List imageBytes = await imageFile.readAsBytes();
-      print('ImageService: Размер исходного изображения: ${imageBytes.length} байт');
-      print('ImageService: Первые байты: ${imageBytes.take(8).map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
       
       // Создаем ключ для шифрования изображения
       final keyBytes = sha256.convert(utf8.encode(noteKey)).bytes;
@@ -157,7 +149,6 @@ class ImageService {
       // Шифруем изображение как base64 строку
       final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc, padding: 'PKCS7'));
       final imageBase64 = base64.encode(imageBytes);
-      print('ImageService: Размер base64: ${imageBase64.length} символов');
       final encrypted = encrypter.encrypt(imageBase64, iv: iv);
       
       // Сохраняем зашифрованное изображение
@@ -174,10 +165,8 @@ class ImageService {
       final encryptedData = '${base64.encode(iv.bytes)}:${encrypted.base64}';
       await File(encryptedPath).writeAsString(encryptedData);
       
-      print('ImageService: Изображение зашифровано: $encryptedPath');
       return encryptedPath;
     } catch (e) {
-      print('Ошибка шифрования изображения: $e');
       return null;
     }
   }
@@ -185,7 +174,6 @@ class ImageService {
   /// Расшифровать изображение
   Future<Uint8List?> decryptImage(String encryptedPath, String noteKey) async {
     try {
-      print('ImageService: Расшифровываем изображение: $encryptedPath');
       
       // Читаем зашифрованные данные
       final encryptedData = await File(encryptedPath).readAsString();
@@ -198,8 +186,6 @@ class ImageService {
       final ivBytes = base64.decode(parts[0]);
       final encryptedString = parts[1];
       
-      print('ImageService: IV: ${ivBytes.length} байт');
-      print('ImageService: Зашифрованные данные: ${encryptedString.length} символов');
       
       // Создаем ключ для расшифровки
       final keyBytes = sha256.convert(utf8.encode(noteKey)).bytes;
@@ -210,16 +196,12 @@ class ImageService {
       final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc, padding: 'PKCS7'));
       final decryptedBase64 = encrypter.decrypt64(encryptedString, iv: iv);
       
-      print('ImageService: Расшифрованный base64: ${decryptedBase64.length} символов');
       
       // Конвертируем обратно в Uint8List
       final decryptedBytes = base64.decode(decryptedBase64);
-      print('ImageService: Размер расшифрованного изображения: ${decryptedBytes.length} байт');
-      print('ImageService: Первые байты расшифрованного: ${decryptedBytes.take(8).map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
       
       return Uint8List.fromList(decryptedBytes);
     } catch (e) {
-      print('Ошибка расшифровки изображения: $e');
       return null;
     }
   }
@@ -234,7 +216,7 @@ class ImageService {
       }
       return false;
     } catch (e) {
-      debugPrint('Ошибка удаления изображения: $e');
+      
       return false;
     }
   }

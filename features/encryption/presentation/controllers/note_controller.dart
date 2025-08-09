@@ -63,20 +63,15 @@ class NoteController extends ChangeNotifier {
 
   /// Обновить временные данные
   void updateTempData(Map<String, dynamic> content, List<NoteImage> images) {
-    print('NoteController: updateTempData вызван');
-    print('NoteController: Новый контент: $content');
-    print('NoteController: Новых изображений: ${images.length}');
     
     _tempContent = content;
     _tempImages = images;
     notifyListeners();
     
-    print('NoteController: Временные данные обновлены');
   }
 
   /// ПОЛНАЯ ОЧИСТКА ВСЕГО КОНТЕКСТА (включая содержимое)
   void clearAllContent() {
-    print('NoteController: ПОЛНАЯ ОЧИСТКА КОНТЕКСТА');
     
     // Очищаем все данные заметки
     _currentNote = null;
@@ -94,13 +89,11 @@ class NoteController extends ChangeNotifier {
     // Очищаем ошибки
     _clearError();
     
-    print('NoteController: Контекст полностью очищен');
     notifyListeners();
   }
 
   /// ОЧИСТКА ТОЛЬКО СОДЕРЖИМОГО (сохраняет QR-код)
   void clearContentOnly() {
-    print('NoteController: ОЧИСТКА ТОЛЬКО СОДЕРЖИМОГО');
     
     // Очищаем только содержимое заметки, но сохраняем QR-код
     _currentNote = null;
@@ -118,7 +111,6 @@ class NoteController extends ChangeNotifier {
     _clearError();
     
     // QR-код НЕ очищаем - он нужен для отображения
-    print('NoteController: Содержимое очищено, QR-код сохранен: $_qrCodeData');
     notifyListeners();
   }
 
@@ -126,18 +118,12 @@ class NoteController extends ChangeNotifier {
   Future<bool> createNote(Map<String, dynamic> content, String masterKey, {List<NoteImage> images = const []}) async {
     _setLoading(true);
     try {
-      print('NoteController: Создание заметки');
-      print('NoteController: Контент: $content');
-      print('NoteController: Изображений: ${images.length}');
       
       final result = await _repository.createNote(content, masterKey, images: images);
       _currentNote = result.$1;
       _qrCodeData = result.$2; // Зашифрованный ключ для QR-кода
       _isFoundNote = false; // Сбрасываем флаг для новой заметки
       
-      print('NoteController: Заметка создана');
-      print('NoteController: ID: ${_currentNote!.id}');
-      print('NoteController: QR код: $_qrCodeData');
       
       // ОЧИСТКА ТОЛЬКО СОДЕРЖИМОГО ПОСЛЕ СОЗДАНИЯ QR-КОДА
       // Содержимое заметки больше не нужно в открытом виде, но QR-код сохраняем
@@ -147,7 +133,6 @@ class NoteController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print('NoteController: Ошибка создания заметки: $e');
       _setError('Ошибка создания заметки: ${e.toString()}');
       return false;
     } finally {
@@ -204,23 +189,15 @@ class NoteController extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      print('NoteController: saveNoteWithImages - начало');
-      print('NoteController: Временный контент: $_tempContent');
-      print('NoteController: Временные изображения: ${_tempImages.length}');
-      print('NoteController: Текущая заметка: ${_currentNote?.id}');
       
       // Создаем или обновляем заметку
       bool success;
       if (_currentNote == null) {
-        print('NoteController: Создаем новую заметку');
         success = await createNote(_tempContent, masterKey, images: _tempImages);
       } else {
-        print('NoteController: Обновляем существующую заметку');
         success = await updateCurrentNote(_tempContent, masterKey, images: _tempImages);
       }
 
-      print('NoteController: Результат операции: $success');
-      print('NoteController: Ошибка: $_error');
 
       if (success) {
         _isEditing = false;
@@ -230,7 +207,6 @@ class NoteController extends ChangeNotifier {
 
       return success;
     } catch (e) {
-      print('NoteController: Исключение в saveNoteWithImages: $e');
       _setError('Ошибка сохранения заметки: ${e.toString()}');
       return false;
     } finally {
@@ -295,9 +271,6 @@ class NoteController extends ChangeNotifier {
     _clearError();
     notifyListeners();
     
-    print('NoteController: Загружена найденная заметка');
-    print('NoteController: ID: ${note.id}');
-    print('NoteController: Расшифрованный ключ сохранен в secure storage');
   }
 
   /// Удалить текущую заметку
@@ -352,7 +325,6 @@ class NoteController extends ChangeNotifier {
       _tempImages.removeWhere((img) => img.id == imageId);
       
       notifyListeners();
-      print('NoteController: Удалено изображение $imageId');
     }
   }
 
